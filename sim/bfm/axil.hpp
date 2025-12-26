@@ -87,9 +87,7 @@ enum resp_type_t {
     DECERR = 3
 };
 
-/**
- * @brief AXI4-Lite Master BFM
- */
+/// @brief AXI4-Lite Master BFM
 template <
     size_t DATA_WIDTH = 32,
     size_t ADDR_WIDTH = 16
@@ -109,7 +107,12 @@ public:
     // Handshake flags for delayed clearing
     bool aw_hs, w_hs, b_hs, ar_hs, r_hs;
 
-    /// Constructor
+    // Store address for logging
+    uint32_t current_wr_addr;
+    uint32_t current_wr_data;
+    uint32_t current_rd_addr;
+
+    /// @brief Constructor
     axil_master(axil_ptr<DATA_WIDTH> port) : port(port) {
         clear();
         wr_active = false;
@@ -119,10 +122,9 @@ public:
         b_hs = false;
         ar_hs = false;
         r_hs = false;
-        std::cerr << "[AXIL-MST][INFO] axil_master constructed." << std::endl;
     }
 
-    /// Clear all signals
+    /// @brief Clear all signals
     void clear() {
         waddr_clr();
         wdata_clr();
@@ -131,18 +133,18 @@ public:
         rresp_clr();
     }
 
-    /// Initiate a write transaction
+    /// @brief Initiate a write transaction
     void write(uint32_t addr, uint32_t data) {
         wr_addr_q.push(addr);
         wr_data_q.push(data);
     }
 
-    /// Initiate a read transaction
+    /// @brief Initiate a read transaction
     void read(uint32_t addr) {
         rd_addr_q.push(addr);
     }
 
-    /// Retrieve read data
+    /// @brief Retrieve read data
     bool get_read_data(uint32_t &data) {
         if (rd_data_q.empty()) return false;
         data = rd_data_q.front();
@@ -201,7 +203,7 @@ public:
         rd_active = false;
     }
 
-    /// Master simulation tick function
+    /// @brief Master simulation tick function
     void tick() {
         // 1. Process delayed clears from previous cycle handshakes
         if (aw_hs) { waddr_clr(); aw_hs = false; }
@@ -227,6 +229,9 @@ public:
                 std::cout << "[AXIL-MST][WARN] Write response not OKAY!" << std::endl;
             }
             b_hs = true;
+            std::cout << "[AXIL-MST] WR success !" << std::endl;
+            std::cout << "ADDR:0x" << std::hex << current_wr_addr 
+                      << "  DATA:0x" << current_wr_data << std::endl << std::endl;
         }
 
         // Read Address
@@ -237,12 +242,14 @@ public:
         // Read Data
         if (*(port.rready) && *(port.rvalid) && !r_hs) {
             uint32_t data = *(port.rdata);
-            std::cout << "[AXIL-MST][INFO] Read Data: 0x" << std::hex << data << std::endl;
             rd_data_q.push(data);
             if (*(port.rresp) != OKAY) {
                 std::cout << "[AXIL-MST][WARN] Read response not OKAY!" << std::endl;
             }
             r_hs = true;
+            std::cout << "[AXIL-MST] RD success !" << std::endl;
+            std::cout << "ADDR:0x" << std::hex << current_rd_addr 
+                      << "  DATA:0x" << data << std::endl << std::endl;
         }
 
         // 3. Drive New Requests (if not busy and not in handshake process)
@@ -250,7 +257,8 @@ public:
             wr_active = true;
             uint32_t addr = wr_addr_q.front(); wr_addr_q.pop();
             uint32_t data = wr_data_q.front(); wr_data_q.pop();
-            std::cout << "[AXIL-MST][INFO] Write Req: addr:0x" << std::hex << addr << " data=0x" << data << std::endl;
+            current_wr_addr = addr;
+            current_wr_data = data;
             waddr_set(addr);
             wdata_set(data);
         }
@@ -258,15 +266,13 @@ public:
         if (!rd_active && !rd_addr_q.empty()) {
             rd_active = true;
             uint32_t addr = rd_addr_q.front(); rd_addr_q.pop();
-            std::cout << "[AXIL-MST][INFO] Read Req: addr:0x" << std::hex << addr << std::endl;
+            current_rd_addr = addr;
             raddr_set(addr);
         }
     }
 };
 
-/**
- * @brief AXI4-Lite Slave BFM
- */
+/// @brief AXI4-Lite Slave BFM
 template <
     size_t DATA_WIDTH = 32,
     size_t ADDR_WIDTH = 16
@@ -287,7 +293,7 @@ public:
     bool rd_data_sent;                      ///< Read data sent flag
     uint32_t rd_data_reg;                   ///< Read data register
 
-    /// Constructor
+    /// @brief Constructor
     axil_slave(axil_ptr<DATA_WIDTH> port) : port(port) {
         wr_addr_received = false;
         wr_data_received = false;
@@ -302,10 +308,9 @@ public:
         *(port.bvalid) = false;
         *(port.arready) = false;
         *(port.rvalid) = false;
-        std::cerr << "[AXIL-SLV][INFO] axil_slave constructed." << std::endl;
     }
 
-    /// Slave simulation tick function
+    /// @brief Slave simulation tick function
     void tick() {
         // 1. Sample Inputs
         bool awvalid = *(port.awvalid);
@@ -330,7 +335,9 @@ public:
         // Write Response
         if (wr_addr_received && wr_data_received && !wr_resp_sent) {
             mem[wr_addr] = wr_data;
-            std::cout << "[AXIL-SLV][INFO] Write: addr=0x" << std::hex << wr_addr << " data=0x" << wr_data << std::endl;
+            std::cout << "[AXIL-SLV] WR success !" << std::endl;
+            std::cout << "ADDR:0x" << std::hex << wr_addr 
+                      << "  DATA:0x" << wr_data << std::endl << std::endl;
             wr_resp_sent = true;
         } else if (wr_resp_sent && bready) {
             wr_resp_sent = false;
@@ -350,7 +357,9 @@ public:
             if (mem.count(rd_addr)) {
                 rdata = mem[rd_addr];
             }
-            std::cout << "[AXIL-SLV][INFO] Read: addr=0x" << std::hex << rd_addr << " data=0x" << rdata << std::endl;
+            std::cout << "[AXIL-SLV] RD success !" << std::endl;
+            std::cout << "ADDR:0x" << std::hex << rd_addr 
+                      << "  DATA:0x" << rdata << std::endl << std::endl;
             rd_data_reg = rdata;
             rd_data_sent = true;
         } else if (rd_data_sent && rready) {

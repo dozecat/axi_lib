@@ -16,70 +16,71 @@
 
 interface if_axi
 #(
-   parameter ADDR_WIDTH      = 32,          // Address width
-   parameter DATA_WIDTH      = 64,          // Data width
-   parameter BURST_WIDTH     = 2,           // Burst type width
-   parameter CACHE_WIDTH     = 4,           // Cache type width
-   parameter ID_WIDTH        = 16,          // ID width
-   parameter BURST_LEN_WIDTH = 4,           // Burst length width (AXI3=4, AXI4=8)
-   parameter LOCK_WIDTH      = 2,           // Lock type width
-   parameter PROT_WIDTH      = 3,           // Protection type width
-   parameter QOS_WIDTH       = 4,           // QoS width
-   parameter REGION_WIDTH    = 4,           // Region width
-   parameter SIZE_WIDTH      = 3,           // Burst size width
-   parameter RESP_WIDTH      = 2,           // Response type width
-   parameter STRB_WIDTH      = DATA_WIDTH/8 // Strobe width
+   parameter ADDR_WIDTH       = 32,          // Address width
+   parameter DATA_WIDTH       = 64,          // Data width
+   parameter ID_WIDTH         = 16,          // ID width
+   parameter STRB_WIDTH       = DATA_WIDTH/8 // Strobe width
 );
 
+localparam BURST_TYPE_WIDTH   = 2;            // Burst type width
+localparam CACHE_WIDTH        = 4;            // Cache type width
+localparam LEN_WIDTH          = 8;            // Burst length width
+localparam LOCK_WIDTH         = 1;            // Lock type width
+localparam PROT_WIDTH         = 3;            // Protection type width
+localparam QOS_WIDTH          = 4;            // QoS width
+localparam REGION_WIDTH       = 4;            // Region width
+localparam SIZE_WIDTH         = 3;            // Burst size width
+localparam RESP_WIDTH         = 2;            // Response type width
+
 // Read Address Channel
-logic [ADDR_WIDTH-1:0]       araddr;
-logic [BURST_WIDTH-1:0]      arburst;
-logic [CACHE_WIDTH-1:0]      arcache;
-logic [ID_WIDTH-1:0]         arid;
-logic [BURST_LEN_WIDTH-1:0]  arlen;
-logic [LOCK_WIDTH-1:0]       arlock;
-logic [PROT_WIDTH-1:0]       arprot;
-logic [QOS_WIDTH-1:0]        arqos;
-logic                        arready;
-logic [REGION_WIDTH-1:0]     arregion;
-logic [SIZE_WIDTH-1:0]       arsize;
-logic                        arvalid;
+logic [ADDR_WIDTH-1:0]        araddr;
+logic [BURST_TYPE_WIDTH-1:0]  arburst;
+logic [CACHE_WIDTH-1:0]       arcache;
+logic [ID_WIDTH-1:0]          arid;
+logic [LEN_WIDTH-1:0]         arlen;
+logic [LOCK_WIDTH-1:0]        arlock;
+logic [PROT_WIDTH-1:0]        arprot;
+logic [QOS_WIDTH-1:0]         arqos;
+logic                         arready;
+logic [REGION_WIDTH-1:0]      arregion;
+logic [SIZE_WIDTH-1:0]        arsize;
+logic                         arvalid;
 
 // Write Address Channel
-logic [ADDR_WIDTH-1:0]       awaddr;
-logic [BURST_WIDTH-1:0]      awburst;
-logic [CACHE_WIDTH-1:0]      awcache;
-logic [ID_WIDTH-1:0]         awid;
-logic [BURST_LEN_WIDTH-1:0]  awlen;
-logic [LOCK_WIDTH-1:0]       awlock;
-logic [PROT_WIDTH-1:0]       awprot;
-logic [QOS_WIDTH-1:0]        awqos;
-logic                        awready;
-logic [REGION_WIDTH-1:0]     awregion;
-logic [SIZE_WIDTH-1:0]       awsize;
-logic                        awvalid;
+logic [ADDR_WIDTH-1:0]        awaddr;
+logic [BURST_TYPE_WIDTH-1:0]  awburst;
+logic [CACHE_WIDTH-1:0]       awcache;
+logic [ID_WIDTH-1:0]          awid;
+logic [LEN_WIDTH-1:0]         awlen;
+logic [LOCK_WIDTH-1:0]        awlock;
+logic [PROT_WIDTH-1:0]        awprot;
+logic [QOS_WIDTH-1:0]         awqos;
+logic                         awready;
+logic [REGION_WIDTH-1:0]      awregion;
+logic [SIZE_WIDTH-1:0]        awsize;
+logic                         awvalid;
 
 // Write Response Channel
-logic [ID_WIDTH-1:0]         bid;
-logic                        bready;
-logic [RESP_WIDTH-1:0]       bresp;
-logic                        bvalid;
+logic [ID_WIDTH-1:0]          bid;
+logic                         bready;
+logic [RESP_WIDTH-1:0]        bresp;
+logic                         bvalid;
 
 // Read Data Channel
-logic [DATA_WIDTH-1:0]       rdata;
-logic [ID_WIDTH-1:0]         rid;
-logic                        rlast;
-logic                        rready;
-logic [RESP_WIDTH-1:0]       rresp;
-logic                        rvalid;
+logic [DATA_WIDTH-1:0]        rdata;
+logic [ID_WIDTH-1:0]          rid;
+logic                         rlast;
+logic                         rready;
+logic [RESP_WIDTH-1:0]        rresp;
+logic                         rvalid;
 
 // Write Data Channel
-logic [DATA_WIDTH-1:0]       wdata;
-logic [ID_WIDTH-1:0]         wid;
-logic                        wlast;
-logic                        wready;
-logic [STRB_WIDTH-1:0]       wstrb;
-logic                        wvalid;
+logic [DATA_WIDTH-1:0]        wdata;
+logic [ID_WIDTH-1:0]          wid;
+logic                         wlast;
+logic                         wready;
+logic [STRB_WIDTH-1:0]        wstrb;
+logic                         wvalid;
 
 modport master (
    output araddr,

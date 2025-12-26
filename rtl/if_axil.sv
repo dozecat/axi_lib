@@ -18,10 +18,11 @@ interface if_axil
 #(
    parameter ADDR_WIDTH = 16,           // Address width
    parameter DATA_WIDTH = 32,           // Data width
-   parameter PROT_WIDTH = 3,            // Protection type width
-   parameter RESP_WIDTH = 2,            // Response type width
    parameter STRB_WIDTH = DATA_WIDTH/8  // Strobe width
 );
+
+localparam PROT_WIDTH   = 3;            // Protection type width
+localparam RESP_WIDTH   = 2;            // Response type width
 
 // Write Address Channel
 logic [ADDR_WIDTH-1:0]  awaddr;
