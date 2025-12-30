@@ -21,6 +21,7 @@
 #include <svdpi.h>
 #include <iostream>
 #include "axil.hpp"
+#include "axil_vip/axil_vip.hpp"
 
 /**
  * @brief Connect BFM pointers to Verilator model signals

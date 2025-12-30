@@ -21,6 +21,7 @@
 #include <svdpi.h>
 #include <iostream>
 #include "axi.hpp"
+#include "axi_vip/axi_vip.hpp"
 
 /**
  * @brief Connect BFM pointers to Verilator model signals
@@ -169,31 +170,48 @@ int main(int argc, char** argv) {
             axi_slv.tick();
         }
         if (sim_time == 20) {
-            axi_mst.write(0x100, (uint32_t)0xABCD1234);
-            axi_mst.write(0x200, (uint32_t)0x12121212);
-            axi_mst.write(0x300, (uint32_t)0x10000000);
+            // Scalar writes converted to vector INCR writes
+            std::vector<uint8_t> data1 = {0x34, 0x12, 0xCD, 0xAB}; // Little endian 0xABCD1234
+            axi_mst.write_incr(0x100, data1);
+            
+            std::vector<uint8_t> data2 = {0x12, 0x12, 0x12, 0x12};
+            axi_mst.write_incr(0x200, data2);
+            
+            std::vector<uint8_t> data3 = {0x00, 0x00, 0x00, 0x10}; // 0x10000000
+            axi_mst.write_incr(0x300, data3);
             
             // Burst Write (INCR)
             std::vector<uint8_t> burst_data;
             for(int i=0; i<256; i++) burst_data.push_back(i); // 256 bytes = 8 beats of 32 bytes
-            axi_mst.write_burst_incr(0x400, burst_data);
+            axi_mst.write_incr(0x400, burst_data);
 
             // Burst Write (FIXED)
             std::vector<uint8_t> fixed_data;
             for(int i=0; i<256; i++) fixed_data.push_back(0xAA);
-            axi_mst.write_burst_fixed(0x500, fixed_data);
+            axi_mst.write_fixed(0x500, fixed_data);
 
             // Vector Write (32 bytes for 256-bit width)
             std::vector<uint8_t> vec_data(32, 0x55); // 32 bytes of 0x55
-            axi_mst.write(0x600, vec_data);
+            axi_mst.write_incr(0x600, vec_data);
+
+            // WRAP Write
+            // 4 beats of 32 bytes = 128 bytes total.
+            // Start at 0x720 (offset 32 from 128-byte aligned 0x700)
+            // Expected sequence: 0x720, 0x740, 0x760, 0x700
+            std::vector<uint8_t> wrap_data;
+            for(int i=0; i<128; i++) wrap_data.push_back(i & 0xFF);
+            axi_mst.write_wrap(0x720, wrap_data);
         }
         if (sim_time == 90) {
-            axi_mst.read(0x100);
-            axi_mst.read(0x200);
-            axi_mst.read(0x300);
+            axi_mst.read_incr(0x100);
+            axi_mst.read_incr(0x200);
+            axi_mst.read_incr(0x300);
             
             // Burst Read
-            axi_mst.read(0x400, 7); // Length 7 (8 beats)
+            axi_mst.read_incr(0x400, 7); // Length 7 (8 beats)
+
+            // WRAP Read
+            axi_mst.read_wrap(0x720, 3);
         }
         top->eval();
         tfp->dump(sim_time);

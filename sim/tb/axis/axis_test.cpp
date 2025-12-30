@@ -22,6 +22,7 @@
 #include <svdpi.h>
 #include <iostream>
 #include "axis.hpp"
+#include "axis_vip.hpp"
 
 /**
  * @brief Connect BFM pointers to Verilator model signals

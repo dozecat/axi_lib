@@ -29,8 +29,8 @@
     typename std::conditional<((msb+1)-(lsb)) <= 64, QData, \
     VlWide<((msb+1)-(lsb))/32+((msb+1)-(lsb))%32>>::type>::type>::type>::type
 
-#define sig(name, msb, lsb) sig_type(msb,lsb) name
-#define sig_in(name, msb, lsb)  sig_type(msb, lsb) name
+#define sig_t(name, msb, lsb) sig_type(msb,lsb) name
+#define sig_in(name, msb, lsb) const sig_type(msb, lsb) name
 #define sig_out(name, msb, lsb) sig_type(msb, lsb) name
 
 #endif
