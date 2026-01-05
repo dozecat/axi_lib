@@ -44,6 +44,17 @@ public:
     bool rd_data_sent;                      ///< Read data sent flag
     uint64_t rd_data_reg;                   ///< Read data register
 
+    // Registered Input Signals
+    bool awvalid_i;
+    uint64_t awaddr_i;
+    bool wvalid_i;
+    uint64_t wdata_i;
+    uint64_t wstrb_i;
+    bool bready_i;
+    bool arvalid_i;
+    uint64_t araddr_i;
+    bool rready_i;
+
     /// @brief Constructor
     axil_slave(axil_slave_ptr<DATA_WIDTH, ADDR_WIDTH> port) : port(port) {
         wr_addr_received = false;
@@ -53,6 +64,17 @@ public:
         rd_data_sent = false;
         rd_data_reg = 0;
         
+        // Initialize inputs
+        awvalid_i = false;
+        awaddr_i = 0;
+        wvalid_i = false;
+        wdata_i = 0;
+        wstrb_i = 0;
+        bready_i = false;
+        arvalid_i = false;
+        araddr_i = 0;
+        rready_i = false;
+
         // Default outputs
         *(port.awready) = false;
         *(port.wready) = false;
@@ -61,25 +83,30 @@ public:
         *(port.rvalid) = false;
     }
 
-    /// @brief Slave simulation tick function
-    void tick() {
-        // 1. Sample Inputs
-        bool awvalid = *(port.awvalid);
-        bool wvalid  = *(port.wvalid);
-        bool bready  = *(port.bready);
-        bool arvalid = *(port.arvalid);
-        bool rready  = *(port.rready);
+    /// @brief Cycle tick
+    void update_input() {
+        awvalid_i = *(port.awvalid);
+        awaddr_i  = *(port.awaddr);
+        wvalid_i  = *(port.wvalid);
+        wdata_i   = *(port.wdata);
+        wstrb_i   = *(port.wstrb);
+        bready_i  = *(port.bready);
+        arvalid_i = *(port.arvalid);
+        araddr_i  = *(port.araddr);
+        rready_i  = *(port.rready);
+    }
 
+    void update_output() {
         // 2. Update State
         // Write Address
-        if (!wr_addr_received && awvalid) {
-            wr_addr = *(port.awaddr);
+        if (!wr_addr_received && awvalid_i) {
+            wr_addr = awaddr_i;
             wr_addr_received = true;
         }
 
         // Write Data
-        if (!wr_data_received && wvalid) {
-            wr_data = *(port.wdata);
+        if (!wr_data_received && wvalid_i) {
+            wr_data = wdata_i;
             wr_data_received = true;
         }
 
@@ -90,15 +117,15 @@ public:
             std::cout << "ADDR:0x" << std::hex << wr_addr 
                       << "  DATA:0x" << wr_data << std::endl << std::endl;
             wr_resp_sent = true;
-        } else if (wr_resp_sent && bready) {
+        } else if (wr_resp_sent && bready_i) {
             wr_resp_sent = false;
             wr_addr_received = false;
             wr_data_received = false;
         }
 
         // Read Address
-        if (!rd_addr_received && arvalid) {
-            rd_addr = *(port.araddr);
+        if (!rd_addr_received && arvalid_i) {
+            rd_addr = araddr_i;
             rd_addr_received = true;
         }
 
@@ -113,7 +140,7 @@ public:
                       << "  DATA:0x" << rdata << std::endl << std::endl;
             rd_data_reg = rdata;
             rd_data_sent = true;
-        } else if (rd_data_sent && rready) {
+        } else if (rd_data_sent && rready_i) {
             rd_data_sent = false;
             rd_addr_received = false;
         }

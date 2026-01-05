@@ -56,6 +56,41 @@ public:
     bool r_done_pending;
     std::vector<uint8_t> r_data_accum;
 
+    // Registered inputs
+    sig_t(ADDR_WIDTH-1, 0) awaddr_i;
+    uint8_t awburst_i;
+    uint8_t awcache_i;
+    sig_t(ID_WIDTH-1, 0) awid_i;
+    uint8_t awlen_i;
+    uint8_t awlock_i;
+    uint8_t awprot_i;
+    uint8_t awqos_i;
+    uint8_t awregion_i;
+    uint8_t awsize_i;
+    bool awvalid_i;
+
+    sig_t(DATA_WIDTH-1, 0) wdata_i;
+    sig_t(ID_WIDTH-1, 0) wid_i;
+    bool wlast_i;
+    sig_t(DATA_WIDTH/8-1, 0) wstrb_i;
+    bool wvalid_i;
+
+    bool bready_i;
+
+    sig_t(ADDR_WIDTH-1, 0) araddr_i;
+    uint8_t arburst_i;
+    uint8_t arcache_i;
+    sig_t(ID_WIDTH-1, 0) arid_i;
+    uint8_t arlen_i;
+    uint8_t arlock_i;
+    uint8_t arprot_i;
+    uint8_t arqos_i;
+    uint8_t arregion_i;
+    uint8_t arsize_i;
+    bool arvalid_i;
+
+    bool rready_i;
+
     /// @brief Calculate address for current beat
     uint64_t get_addr(uint64_t start_addr, uint32_t beat, uint32_t len, uint8_t burst, size_t bytes_per_beat) {
         if (burst == 0) { // FIXED
@@ -81,6 +116,40 @@ public:
         ar_latch = false;
         r_active = false;
         r_done_pending = false;
+
+        signal_clr(&awaddr_i);
+        awburst_i = 0;
+        awcache_i = 0;
+        signal_clr(&awid_i);
+        awlen_i = 0;
+        awlock_i = 0;
+        awprot_i = 0;
+        awqos_i = 0;
+        awregion_i = 0;
+        awsize_i = 0;
+        awvalid_i = false;
+
+        signal_clr(&wdata_i);
+        signal_clr(&wid_i);
+        wlast_i = false;
+        signal_clr(&wstrb_i);
+        wvalid_i = false;
+
+        bready_i = false;
+
+        signal_clr(&araddr_i);
+        arburst_i = 0;
+        arcache_i = 0;
+        signal_clr(&arid_i);
+        arlen_i = 0;
+        arlock_i = 0;
+        arprot_i = 0;
+        arqos_i = 0;
+        arregion_i = 0;
+        arsize_i = 0;
+        arvalid_i = false;
+
+        rready_i = false;
     }
 
     /// @brief Reset all signals
@@ -102,16 +171,52 @@ public:
     }
 
     /// @brief Cycle tick
-    void tick() {
+    void update_input() {
+        awaddr_i = *(port.awaddr);
+        awburst_i = *(port.awburst);
+        awcache_i = *(port.awcache);
+        awid_i = *(port.awid);
+        awlen_i = *(port.awlen);
+        awlock_i = *(port.awlock);
+        awprot_i = *(port.awprot);
+        awqos_i = *(port.awqos);
+        awregion_i = *(port.awregion);
+        awsize_i = *(port.awsize);
+        awvalid_i = *(port.awvalid);
+
+        wdata_i = *(port.wdata);
+        wid_i = *(port.wid);
+        wlast_i = *(port.wlast);
+        wstrb_i = *(port.wstrb);
+        wvalid_i = *(port.wvalid);
+
+        bready_i = *(port.bready);
+
+        araddr_i = *(port.araddr);
+        arburst_i = *(port.arburst);
+        arcache_i = *(port.arcache);
+        arid_i = *(port.arid);
+        arlen_i = *(port.arlen);
+        arlock_i = *(port.arlock);
+        arprot_i = *(port.arprot);
+        arqos_i = *(port.arqos);
+        arregion_i = *(port.arregion);
+        arsize_i = *(port.arsize);
+        arvalid_i = *(port.arvalid);
+
+        rready_i = *(port.rready);
+    }
+
+    void update_output() {
         // Write Channel
         // AW Phase
         if (!aw_latch) {
             *(port.awready) = true;
-            if (*(port.awvalid)) {
-                aw_addr = *(port.awaddr);
-                aw_id = *(port.awid);
-                aw_len = *(port.awlen);
-                aw_burst = *(port.awburst);
+            if (awvalid_i) {
+                aw_addr = awaddr_i;
+                aw_id = awid_i;
+                aw_len = awlen_i;
+                aw_burst = awburst_i;
                 aw_latch = true;
                 w_active = true;
                 w_beat_count = 0;
@@ -136,17 +241,17 @@ public:
 
         if (w_active) {
             *(port.wready) = true;
-            if (*(port.wvalid)) {
+            if (wvalid_i) {
                 size_t bytes_per_beat = DATA_WIDTH/8;
                 uint64_t base_addr = get_addr(aw_addr, w_beat_count, aw_len, aw_burst, bytes_per_beat);
                 
                 std::vector<uint8_t> beat_data;
-                signal_get(port.wdata, beat_data, bytes_per_beat);
+                signal_get(&wdata_i, beat_data, bytes_per_beat);
 
                 // Get strobes
                 std::vector<uint8_t> strb_vec;
                 size_t strb_width_bytes = (bytes_per_beat + 7) / 8;
-                signal_get(port.wstrb, strb_vec, strb_width_bytes);
+                signal_get(&wstrb_i, strb_vec, strb_width_bytes);
 
                 for (size_t i=0; i<bytes_per_beat; i++) {
                     bool strb_bit = (strb_vec[i/8] >> (i%8)) & 1;
@@ -158,7 +263,7 @@ public:
                 
                 w_beat_count++;
                 
-                if (*(port.wlast) || w_beat_count > aw_len) { // awlen is 0-based
+                if (wlast_i || w_beat_count > aw_len) { // awlen is 0-based
                     w_done_pending = true;
                     // Keep wready=1 for this cycle so Master sees it
                     return;
@@ -169,7 +274,7 @@ public:
         }
 
         // B Phase
-        if (*(port.bvalid) && *(port.bready)) {
+        if (*(port.bvalid) && bready_i) {
             *(port.bvalid) = false;
             aw_latch = false; // Ready for next transaction
             std::cout << "[AXI-SLV] " << burst_to_string(aw_burst) << " WR success !" << std::endl;
@@ -184,11 +289,11 @@ public:
         // AR Phase
         if (!ar_latch) {
             *(port.arready) = true;
-            if (*(port.arvalid)) {
-                ar_addr = *(port.araddr);
-                ar_id = *(port.arid);
-                ar_len = *(port.arlen);
-                ar_burst = *(port.arburst);
+            if (arvalid_i) {
+                ar_addr = araddr_i;
+                ar_id = arid_i;
+                ar_len = arlen_i;
+                ar_burst = arburst_i;
                 ar_latch = true;
                 r_active = true;
                 r_beat_count = 0;
@@ -238,7 +343,7 @@ public:
             bool last = (r_beat_count == ar_len);
             *(port.rlast) = last;
 
-            if (*(port.rready)) {
+            if (rready_i) {
                 r_data_accum.insert(r_data_accum.end(), beat_data.begin(), beat_data.end());
                 r_beat_count++;
                 if (last) {
@@ -247,6 +352,11 @@ public:
                 }
             }
         }
+    }
+
+    void tick() {
+        update_input();
+        update_output();
     }
 };
 

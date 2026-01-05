@@ -61,25 +61,25 @@ template <
     size_t ADDR_WIDTH = 16
 >
 struct axil_ptr {
-    sig_t(*awaddr , ADDR_WIDTH-1  , 0) = NULL;
-    sig_t(*awprot , 2             , 0) = NULL;
-    sig_t(*awready, 0             , 0) = NULL;
-    sig_t(*awvalid, 0             , 0) = NULL;
-    sig_t(*bready , 0             , 0) = NULL;
-    sig_t(*bresp  , 1             , 0) = NULL;
-    sig_t(*bvalid , 0             , 0) = NULL;
-    sig_t(*wdata  , DATA_WIDTH-1  , 0) = NULL;
-    sig_t(*wready , 0             , 0) = NULL;
-    sig_t(*wstrb  , DATA_WIDTH/8-1, 0) = NULL;
-    sig_t(*wvalid , 0             , 0) = NULL;
-    sig_t(*araddr , ADDR_WIDTH-1  , 0) = NULL;
-    sig_t(*arprot , 2             , 0) = NULL;
-    sig_t(*arready, 0             , 0) = NULL;
-    sig_t(*arvalid, 0             , 0) = NULL;
-    sig_t(*rdata  , DATA_WIDTH-1  , 0) = NULL;
-    sig_t(*rready , 0             , 0) = NULL;
-    sig_t(*rresp  , 1             , 0) = NULL;
-    sig_t(*rvalid , 0             , 0) = NULL;
+    sig_io(*awaddr , ADDR_WIDTH-1  , 0) = NULL;
+    sig_io(*awprot , 2             , 0) = NULL;
+    sig_io(*awready, 0             , 0) = NULL;
+    sig_io(*awvalid, 0             , 0) = NULL;
+    sig_io(*bready , 0             , 0) = NULL;
+    sig_io(*bresp  , 1             , 0) = NULL;
+    sig_io(*bvalid , 0             , 0) = NULL;
+    sig_io(*wdata  , DATA_WIDTH-1  , 0) = NULL;
+    sig_io(*wready , 0             , 0) = NULL;
+    sig_io(*wstrb  , DATA_WIDTH/8-1, 0) = NULL;
+    sig_io(*wvalid , 0             , 0) = NULL;
+    sig_io(*araddr , ADDR_WIDTH-1  , 0) = NULL;
+    sig_io(*arprot , 2             , 0) = NULL;
+    sig_io(*arready, 0             , 0) = NULL;
+    sig_io(*arvalid, 0             , 0) = NULL;
+    sig_io(*rdata  , DATA_WIDTH-1  , 0) = NULL;
+    sig_io(*rready , 0             , 0) = NULL;
+    sig_io(*rresp  , 1             , 0) = NULL;
+    sig_io(*rvalid , 0             , 0) = NULL;
 
     /// Check if all signal pointers are assigned
     bool check() {

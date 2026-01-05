@@ -81,21 +81,21 @@ int main(int argc, char** argv) {
     Vaxil_test* top = new Vaxil_test;
     VerilatedVcdC* tfp = new VerilatedVcdC;
 
-    axil_ptr<32, 16> axil_in_if;
-    axil_ptr<32, 16> axil_out_if;
+    axil_ptr<32, 16> axil_in_ptr;
+    axil_ptr<32, 16> axil_out_ptr;
 
-    axil_connect(axil_in_if, axil_out_if, top);
-    if (!axil_in_if.check()) {
-        std::cerr << "axil_in_if connection failed!" << std::endl;
+    axil_connect(axil_in_ptr, axil_out_ptr, top);
+    if (!axil_in_ptr.check()) {
+        std::cerr << "axil_in_ptr connection failed!" << std::endl;
         return -1;
     }
-    if (!axil_out_if.check()) {
-        std::cerr << "axil_out_if connection failed!" << std::endl;
+    if (!axil_out_ptr.check()) {
+        std::cerr << "axil_out_ptr connection failed!" << std::endl;
         return -1;
     }
 
-    axil_master<32, 16> axil_mst(axil_in_if);
-    axil_slave<32, 16> axil_slv(axil_out_if);
+    axil_master<32, 16> axil_mst(axil_in_ptr);
+    axil_slave<32, 16> axil_slv(axil_out_ptr);
 
     top->trace(tfp, 100);
     tfp->open("waveform.vcd");
@@ -103,41 +103,59 @@ int main(int argc, char** argv) {
     top->clk = 0;
     top->rst = 1;
 
-    int sim_time = 0;
-    const int max_sim_time = 500;
+    uint64_t cycle_count = 0;
+    const uint64_t max_cycles = 100;
 
-    while (!Verilated::gotFinish() && sim_time < max_sim_time) {
-        sim_time++;
-        top->clk = !top->clk;
-        if (sim_time == 10) {
+    while (!Verilated::gotFinish() && cycle_count < max_cycles) {
+        // 1. Sample Inputs (Before Rising Edge)
+        axil_mst.update_input();
+        axil_slv.update_input();
+
+        // 2. Rising Edge
+        top->clk = 1;
+        top->eval();
+        tfp->dump(cycle_count * 10);
+
+        // 3. Drive Outputs (After Rising Edge)
+        axil_mst.update_output();
+        axil_slv.update_output();
+        
+        // Propagate VIP outputs to DUT inputs
+        top->eval(); 
+
+        // Check for read data
+        uint64_t rdata;
+        if (axil_mst.get_read_data(rdata)) {
+            std::cout << "[TEST] Got read data: 0x" << std::hex << rdata << std::endl;
+        }
+
+        // 4. Falling Edge
+        top->clk = 0;
+        top->eval();
+        tfp->dump(cycle_count * 10 + 5);
+
+        // Test Stimulus
+        if (cycle_count == 2) {
             top->rst = 0;
         }
-        if (top->clk) {
-            axil_mst.tick();
-            axil_slv.tick();
-            uint32_t rdata;
-            if (axil_mst.get_read_data(rdata)) {
-                std::cout << "[TEST] Got read data: 0x" << std::hex << rdata << std::endl;
-            }
-        }
-        if (sim_time == 20) {
+        if (cycle_count == 5) {
             axil_mst.write(0x100, 0xABCD1234);
             axil_mst.write(0x200, 0x12121212);
             axil_mst.write(0x300, 0x10000000);
         }
-        if (sim_time == 90) {
+        if (cycle_count == 20) {
             axil_mst.read(0x100);
             axil_mst.read(0x200);
             axil_mst.read(0x300);
         }
-        top->eval();
-        tfp->dump(sim_time);
+
+        cycle_count++;
     }
 
     tfp->close();
     delete tfp;
     delete top;
 
-    std::cout << "Simulation finished at time " << sim_time << std::endl;
+    std::cout << "Simulation finished at cycle " << cycle_count << std::endl;
     return 0;
 }

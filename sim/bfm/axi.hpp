@@ -81,54 +81,54 @@ struct axi_ptr {
     static constexpr size_t REGION_WIDTH = 4;
 
     // Write Address Channel
-    sig_t(*awaddr   , ADDR_WIDTH-1  , 0) = NULL; ///< Write address
-    sig_t(*awburst  , 1             , 0) = NULL; ///< Burst type
-    sig_t(*awcache  , 3             , 0) = NULL; ///< Cache type
-    sig_t(*awid     , ID_WIDTH-1    , 0) = NULL; ///< Write address ID
-    sig_t(*awlen    , LEN_WIDTH-1   , 0) = NULL; ///< Burst length
-    sig_t(*awlock   , LOCK_WIDTH-1  , 0) = NULL; ///< Lock type
-    sig_t(*awprot   , 2             , 0) = NULL; ///< Protection type
-    sig_t(*awqos    , QOS_WIDTH-1   , 0) = NULL; ///< Quality of Service
-    sig_t(*awready  , 0             , 0) = NULL; ///< Write address ready
-    sig_t(*awregion , REGION_WIDTH-1, 0) = NULL; ///< Region identifier
-    sig_t(*awsize   , 2             , 0) = NULL; ///< Burst size
-    sig_t(*awvalid  , 0             , 0) = NULL; ///< Write address valid
+    sig_io(*awaddr   , ADDR_WIDTH-1  , 0) = NULL; ///< Write address
+    sig_io(*awburst  , 1             , 0) = NULL; ///< Burst type
+    sig_io(*awcache  , 3             , 0) = NULL; ///< Cache type
+    sig_io(*awid     , ID_WIDTH-1    , 0) = NULL; ///< Write address ID
+    sig_io(*awlen    , LEN_WIDTH-1   , 0) = NULL; ///< Burst length
+    sig_io(*awlock   , LOCK_WIDTH-1  , 0) = NULL; ///< Lock type
+    sig_io(*awprot   , 2             , 0) = NULL; ///< Protection type
+    sig_io(*awqos    , QOS_WIDTH-1   , 0) = NULL; ///< Quality of Service
+    sig_io(*awready  , 0             , 0) = NULL; ///< Write address ready
+    sig_io(*awregion , REGION_WIDTH-1, 0) = NULL; ///< Region identifier
+    sig_io(*awsize   , 2             , 0) = NULL; ///< Burst size
+    sig_io(*awvalid  , 0             , 0) = NULL; ///< Write address valid
 
     // Write Data Channel
-    sig_t(*wdata    , DATA_WIDTH-1  , 0) = NULL; ///< Write data
-    sig_t(*wid      , ID_WIDTH-1    , 0) = NULL; ///< Write ID
-    sig_t(*wlast    , 0             , 0) = NULL; ///< Write last
-    sig_t(*wready   , 0             , 0) = NULL; ///< Write ready
-    sig_t(*wstrb    , DATA_WIDTH/8-1, 0) = NULL; ///< Write strobes
-    sig_t(*wvalid   , 0             , 0) = NULL; ///< Write valid
+    sig_io(*wdata    , DATA_WIDTH-1  , 0) = NULL; ///< Write data
+    sig_io(*wid      , ID_WIDTH-1    , 0) = NULL; ///< Write ID
+    sig_io(*wlast    , 0             , 0) = NULL; ///< Write last
+    sig_io(*wready   , 0             , 0) = NULL; ///< Write ready
+    sig_io(*wstrb    , DATA_WIDTH/8-1, 0) = NULL; ///< Write strobes
+    sig_io(*wvalid   , 0             , 0) = NULL; ///< Write valid
 
     // Write Response Channel
-    sig_t(*bid      , ID_WIDTH-1    , 0) = NULL; ///< Response ID
-    sig_t(*bready   , 0             , 0) = NULL; ///< Response ready
-    sig_t(*bresp    , 1             , 0) = NULL; ///< Write response
-    sig_t(*bvalid   , 0             , 0) = NULL; ///< Response valid
+    sig_io(*bid      , ID_WIDTH-1    , 0) = NULL; ///< Response ID
+    sig_io(*bready   , 0             , 0) = NULL; ///< Response ready
+    sig_io(*bresp    , 1             , 0) = NULL; ///< Write response
+    sig_io(*bvalid   , 0             , 0) = NULL; ///< Response valid
 
     // Read Address Channel
-    sig_t(*araddr   , ADDR_WIDTH-1  , 0) = NULL; ///< Read address
-    sig_t(*arburst  , 1             , 0) = NULL; ///< Burst type
-    sig_t(*arcache  , 3             , 0) = NULL; ///< Cache type
-    sig_t(*arid     , ID_WIDTH-1    , 0) = NULL; ///< Read address ID
-    sig_t(*arlen    , LEN_WIDTH-1   , 0) = NULL; ///< Burst length
-    sig_t(*arlock   , LOCK_WIDTH-1  , 0) = NULL; ///< Lock type
-    sig_t(*arprot   , 2             , 0) = NULL; ///< Protection type
-    sig_t(*arqos    , QOS_WIDTH-1   , 0) = NULL; ///< Quality of Service
-    sig_t(*arready  , 0             , 0) = NULL; ///< Read address ready
-    sig_t(*arregion , REGION_WIDTH-1, 0) = NULL; ///< Region identifier
-    sig_t(*arsize   , 2             , 0) = NULL; ///< Burst size
-    sig_t(*arvalid  , 0             , 0) = NULL; ///< Read address valid
+    sig_io(*araddr   , ADDR_WIDTH-1  , 0) = NULL; ///< Read address
+    sig_io(*arburst  , 1             , 0) = NULL; ///< Burst type
+    sig_io(*arcache  , 3             , 0) = NULL; ///< Cache type
+    sig_io(*arid     , ID_WIDTH-1    , 0) = NULL; ///< Read address ID
+    sig_io(*arlen    , LEN_WIDTH-1   , 0) = NULL; ///< Burst length
+    sig_io(*arlock   , LOCK_WIDTH-1  , 0) = NULL; ///< Lock type
+    sig_io(*arprot   , 2             , 0) = NULL; ///< Protection type
+    sig_io(*arqos    , QOS_WIDTH-1   , 0) = NULL; ///< Quality of Service
+    sig_io(*arready  , 0             , 0) = NULL; ///< Read address ready
+    sig_io(*arregion , REGION_WIDTH-1, 0) = NULL; ///< Region identifier
+    sig_io(*arsize   , 2             , 0) = NULL; ///< Burst size
+    sig_io(*arvalid  , 0             , 0) = NULL; ///< Read address valid
 
     // Read Data Channel
-    sig_t(*rdata    , DATA_WIDTH-1  , 0) = NULL; ///< Read data
-    sig_t(*rid      , ID_WIDTH-1    , 0) = NULL; ///< Read ID
-    sig_t(*rlast    , 0             , 0) = NULL; ///< Read last
-    sig_t(*rready   , 0             , 0) = NULL; ///< Read ready
-    sig_t(*rresp    , 1             , 0) = NULL; ///< Read response
-    sig_t(*rvalid   , 0             , 0) = NULL; ///< Read valid
+    sig_io(*rdata    , DATA_WIDTH-1  , 0) = NULL; ///< Read data
+    sig_io(*rid      , ID_WIDTH-1    , 0) = NULL; ///< Read ID
+    sig_io(*rlast    , 0             , 0) = NULL; ///< Read last
+    sig_io(*rready   , 0             , 0) = NULL; ///< Read ready
+    sig_io(*rresp    , 1             , 0) = NULL; ///< Read response
+    sig_io(*rvalid   , 0             , 0) = NULL; ///< Read valid
 
     /// @brief Check if all signal pointers are assigned
     /// @return true if all signals are non-NULL

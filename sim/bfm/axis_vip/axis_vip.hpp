@@ -44,12 +44,16 @@ public:
     axis_master_ptr<DATA_WIDTH> port;       ///< Interface signal pointers
     bool tx_tuser;                          ///< TUSER value for current transaction
     int byte_width;                         ///< Data width in bytes
+    
+    // Registered Input Signals
+    bool tready_i;
 
     /// @brief Constructor
     axis_master(axis_master_ptr<DATA_WIDTH> port):port(port) {
         tx_tuser = false;
         byte_width = DATA_WIDTH/8;
         tx_buf_idx = 0;
+        tready_i = false;
     }
 
     /// @brief Destructor
@@ -69,12 +73,16 @@ public:
 
     /// @brief Get the current TREADY state
     bool get_tready() {
-        return *(port.tready);
+        return tready_i;
     }
 
-    /// @brief Master simulation tick function
-    void tick() {
-        if (*(port.tready)) {
+    /// @brief Cycle tick
+    void update_input() {
+        tready_i = *(port.tready);
+    }
+
+    void update_output() {
+        if (tready_i) {
             *(port.tvalid) = false;
             // start new transaction
             if (tx_buf.empty() && !tx_queue.empty()) {
@@ -123,9 +131,20 @@ public:
     std::queue<std::vector<uint8_t>> rx_queue;///< Queue of received packets
     axis_slave_ptr<DATA_WIDTH> port;        ///< Interface signal pointers
 
+    // Registered Input Signals
+    bool tvalid_i;
+    uint64_t tkeep_i;
+    bool tlast_i;
+    uint32_t tuser_i;
+    std::vector<uint8_t> tdata_i;
+
     /// @brief Constructor
     axis_slave(axis_slave_ptr<DATA_WIDTH> port):port(port) {
         *(port.tready) = true; // always tready
+        tvalid_i = false;
+        tkeep_i = 0;
+        tlast_i = false;
+        tuser_i = 0;
     }
 
     /// @brief Destructor
@@ -152,15 +171,27 @@ public:
         }
     }
 
-    /// @brief Slave simulation tick function
-    void tick() {
-        if (*(port.tvalid)) {
+    /// @brief Cycle tick
+    void update_input() {
+        tvalid_i = *(port.tvalid);
+        tkeep_i = *(port.tkeep);
+        tlast_i = *(port.tlast);
+        tuser_i = *(port.tuser);
+        
+        tdata_i.clear();
+        for (int i=0; i<DATA_WIDTH/8; i++) {
+             tdata_i.push_back(((char*)port.tdata)[i]);
+        }
+    }
+
+    void update_output() {
+        if (tvalid_i) {
             for (int i=0;i<DATA_WIDTH/8;i++) {
-                if ((*port.tkeep & ((uint64_t)1 << i)) != 0) {
-                    recv_buf.push_back(((char*)port.tdata)[i]);
+                if ((tkeep_i & ((uint64_t)1 << i)) != 0) {
+                    recv_buf.push_back(tdata_i[i]);
                 }
             }
-            if (*(port.tlast)) {
+            if (tlast_i) {
                 rx_queue.push(recv_buf);
                 std::cout << "[AXIS-SLV] RECV success !" << std::endl;
                 std::cout << "SIZE:" << std::dec << recv_buf.size() << "  DATA:" << std::endl;
@@ -169,6 +200,8 @@ public:
                 recv_buf.clear();
             }
         }
+        // Drive tready (always true)
+        *(port.tready) = true;
     }
 };
 

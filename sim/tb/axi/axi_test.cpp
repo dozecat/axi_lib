@@ -133,21 +133,21 @@ int main(int argc, char** argv) {
     Vaxi_test* top = new Vaxi_test;
     VerilatedVcdC* tfp = new VerilatedVcdC;
 
-    axi_ptr<256, 40, 16> axi_in_if;
-    axi_ptr<256, 40, 16> axi_out_if;
+    axi_ptr<256, 40, 16> axi_in_prt;
+    axi_ptr<256, 40, 16> axi_out_ptr;
 
-    axi_connect(axi_in_if, axi_out_if, top);
-    if (!axi_in_if.check()) {
-        std::cerr << "axi_in_if connection failed!" << std::endl;
+    axi_connect(axi_in_prt, axi_out_ptr, top);
+    if (!axi_in_prt.check()) {
+        std::cerr << "axi_in_prt connection failed!" << std::endl;
         return -1;
     }
-    if (!axi_out_if.check()) {
-        std::cerr << "axi_out_if connection failed!" << std::endl;
+    if (!axi_out_ptr.check()) {
+        std::cerr << "axi_out_ptr connection failed!" << std::endl;
         return -1;
     }
 
-    axi_master<256, 40, 16> axi_mst(axi_in_if);
-    axi_slave<256, 40, 16> axi_slv(axi_out_if);
+    axi_master<256, 40, 16> axi_mst(axi_in_prt);
+    axi_slave<256, 40, 16> axi_slv(axi_out_ptr);
 
     top->trace(tfp, 100);
     tfp->open("waveform.vcd");
@@ -156,6 +156,7 @@ int main(int argc, char** argv) {
     top->rst = 1;
 
     int sim_time = 0;
+    uint64_t cycle_count = 0;
     const int max_sim_time = 20000;
 
     while (!Verilated::gotFinish() && sim_time < max_sim_time) {
@@ -165,55 +166,57 @@ int main(int argc, char** argv) {
             top->rst = 0;
         }
         if (top->clk) {
-            axi_mst.tick();
-            top->eval(); // Propagate signals from Master to Slave
-            axi_slv.tick();
+            cycle_count++;
+            axi_mst.update_input();
+            axi_slv.update_input();
+            top->eval();
+            if (cycle_count == 10) {
+                // Scalar writes converted to vector INCR writes
+                std::vector<uint8_t> data1 = {0x34, 0x12, 0xCD, 0xAB}; // Little endian 0xABCD1234
+                axi_mst.write_incr(0x100, data1);
+                
+                std::vector<uint8_t> data2 = {0x12, 0x12, 0x12, 0x12};
+                axi_mst.write_incr(0x200, data2);
+                
+                std::vector<uint8_t> data3 = {0x00, 0x00, 0x00, 0x10}; // 0x10000000
+                axi_mst.write_incr(0x300, data3);
+                
+                // Burst Write (INCR)
+                std::vector<uint8_t> burst_data;
+                for(int i=0; i<256; i++) burst_data.push_back(i); // 256 bytes = 8 beats of 32 bytes
+                axi_mst.write_incr(0x400, burst_data);
+
+                // Burst Write (FIXED)
+                std::vector<uint8_t> fixed_data;
+                for(int i=0; i<256; i++) fixed_data.push_back(0xAA);
+                axi_mst.write_fixed(0x500, fixed_data);
+
+                // Vector Write (32 bytes for 256-bit width)
+                std::vector<uint8_t> vec_data(32, 0x55); // 32 bytes of 0x55
+                axi_mst.write_incr(0x600, vec_data);
+
+                // WRAP Write
+                // 4 beats of 32 bytes = 128 bytes total.
+                // Start at 0x720 (offset 32 from 128-byte aligned 0x700)
+                // Expected sequence: 0x720, 0x740, 0x760, 0x700
+                std::vector<uint8_t> wrap_data;
+                for(int i=0; i<128; i++) wrap_data.push_back(i & 0xFF);
+                axi_mst.write_wrap(0x720, wrap_data);
+            }
+            if (cycle_count == 46) {
+                axi_mst.read_incr(0x100);
+                axi_mst.read_incr(0x200);
+                axi_mst.read_incr(0x300);
+                
+                // Burst Read
+                axi_mst.read_incr(0x400, 7); // Length 7 (8 beats)
+
+                // WRAP Read
+                axi_mst.read_wrap(0x720, 3);
+            }
+            axi_mst.update_output();
+            axi_slv.update_output();
         }
-        if (sim_time == 20) {
-            // Scalar writes converted to vector INCR writes
-            std::vector<uint8_t> data1 = {0x34, 0x12, 0xCD, 0xAB}; // Little endian 0xABCD1234
-            axi_mst.write_incr(0x100, data1);
-            
-            std::vector<uint8_t> data2 = {0x12, 0x12, 0x12, 0x12};
-            axi_mst.write_incr(0x200, data2);
-            
-            std::vector<uint8_t> data3 = {0x00, 0x00, 0x00, 0x10}; // 0x10000000
-            axi_mst.write_incr(0x300, data3);
-            
-            // Burst Write (INCR)
-            std::vector<uint8_t> burst_data;
-            for(int i=0; i<256; i++) burst_data.push_back(i); // 256 bytes = 8 beats of 32 bytes
-            axi_mst.write_incr(0x400, burst_data);
-
-            // Burst Write (FIXED)
-            std::vector<uint8_t> fixed_data;
-            for(int i=0; i<256; i++) fixed_data.push_back(0xAA);
-            axi_mst.write_fixed(0x500, fixed_data);
-
-            // Vector Write (32 bytes for 256-bit width)
-            std::vector<uint8_t> vec_data(32, 0x55); // 32 bytes of 0x55
-            axi_mst.write_incr(0x600, vec_data);
-
-            // WRAP Write
-            // 4 beats of 32 bytes = 128 bytes total.
-            // Start at 0x720 (offset 32 from 128-byte aligned 0x700)
-            // Expected sequence: 0x720, 0x740, 0x760, 0x700
-            std::vector<uint8_t> wrap_data;
-            for(int i=0; i<128; i++) wrap_data.push_back(i & 0xFF);
-            axi_mst.write_wrap(0x720, wrap_data);
-        }
-        if (sim_time == 90) {
-            axi_mst.read_incr(0x100);
-            axi_mst.read_incr(0x200);
-            axi_mst.read_incr(0x300);
-            
-            // Burst Read
-            axi_mst.read_incr(0x400, 7); // Length 7 (8 beats)
-
-            // WRAP Read
-            axi_mst.read_wrap(0x720, 3);
-        }
-        top->eval();
         tfp->dump(sim_time);
     }
 

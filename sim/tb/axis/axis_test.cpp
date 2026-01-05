@@ -62,21 +62,21 @@ int main(int argc, char** argv) {
     Vaxis_test* top = new Vaxis_test;
     VerilatedVcdC* tfp = new VerilatedVcdC;
 
-    axis_ptr<256, 8, 1, 1> axis_in_if;
-    axis_ptr<256, 8, 1, 1> axis_out_if;
+    axis_ptr<256, 8, 1, 1> axis_in_ptr;
+    axis_ptr<256, 8, 1, 1> axis_out_ptr;
 
-    axis_connect(axis_in_if, axis_out_if, top);
-    if (!axis_in_if.check()) {
-        std::cerr << "axis_in_if connection failed!" << std::endl;
+    axis_connect(axis_in_ptr, axis_out_ptr, top);
+    if (!axis_in_ptr.check()) {
+        std::cerr << "axis_in_ptr connection failed!" << std::endl;
         return -1;
     }
-    if (!axis_out_if.check()) {
-        std::cerr << "axis_out_if connection failed!" << std::endl;
+    if (!axis_out_ptr.check()) {
+        std::cerr << "axis_out_ptr connection failed!" << std::endl;
         return -1;
     }
 
-    axis_master<256> axis_mst(axis_in_if);
-    axis_slave<256> axis_slv(axis_out_if);
+    axis_master<256> axis_mst(axis_in_ptr);
+    axis_slave<256> axis_slv(axis_out_ptr);
 
     top->trace(tfp, 100);
     tfp->open("waveform.vcd");
@@ -84,43 +84,59 @@ int main(int argc, char** argv) {
     top->axis_clk = 0;
     top->axis_rst = 1;
 
-    int sim_time = 0;
-    const int max_sim_time = 100;
+    uint64_t cycle_count = 0;
+    const uint64_t max_cycles = 100;
 
-    while (!Verilated::gotFinish() && sim_time < max_sim_time) {
-        sim_time++;
-        top->axis_clk = !top->axis_clk;
-        if (sim_time == 10) {
+    while (!Verilated::gotFinish() && cycle_count < max_cycles) {
+        // 1. Sample Inputs (Before Rising Edge)
+        axis_mst.update_input();
+        axis_slv.update_input();
+
+        // 2. Rising Edge
+        top->axis_clk = 1;
+        top->eval();
+        tfp->dump(cycle_count * 10);
+
+        // 3. Drive Outputs (After Rising Edge)
+        axis_mst.update_output();
+        axis_slv.update_output();
+        
+        // Propagate VIP outputs to DUT inputs
+        top->eval();
+
+        // 4. Falling Edge
+        top->axis_clk = 0;
+        top->eval();
+        tfp->dump(cycle_count * 10 + 5);
+
+        // Stimulus
+        if (cycle_count == 2) {
             top->axis_rst = 0;
         }
-        if (top->axis_clk) {
-            axis_mst.tick();
-            axis_slv.tick();
-        }
-        if (sim_time == 20) {
+        if (cycle_count == 5) {
             char data_num[100];
             for (int i = 0; i < 100; i++) {
                 data_num[i] = i;
             }
             axis_mst.send(data_num, 77);
         }
-        if (sim_time == 90) {
+        if (cycle_count == 40) {
             char data_recv[100];
-            std::cout << "Data at time 90: ";
+            std::cout << "Data at cycle 40: ";
             ssize_t recv_size = axis_slv.recv(100, data_recv);
             for (int i = 0; i < recv_size; i++) {
                 std::cout << (int)data_recv[i] << " ";
             }
             std::cout << "Size: " << recv_size << std::endl;
         }
-        top->eval();
-        tfp->dump(sim_time);
+        
+        cycle_count++;
     }
 
     tfp->close();
     delete tfp;
     delete top;
 
-    std::cout << "Simulation finished at time " << sim_time << std::endl;
+    std::cout << "Simulation finished at cycle " << cycle_count << std::endl;
     return 0;
 }

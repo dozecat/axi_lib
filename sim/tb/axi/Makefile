@@ -30,11 +30,17 @@ sim: waveform.vcd
 
 # Only generate Verilator project files (no build)
 .PHONY: verilate
-verilate: .stamp.verilate
+verilate:
+	@echo "### VERILATING ###"
+	$(VERILATOR) -cc --exe -j 4 \
+		--top-module $(MODULE) \
+		$(SVLOG_FILES) $(TEST_CPP) \
+		-CFLAGS "$(CPP_INC_FLAGS)" \
+		--trace
 
 # Generate Verilator project files and build simulation executable
 .PHONY: build
-build: .stamp.verilate ./obj_dir/V$(MODULE)
+build: ./obj_dir/V$(MODULE)
 
 # Run simulation and open waveform in GTKWave
 .PHONY: waves

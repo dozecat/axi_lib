@@ -47,15 +47,15 @@ template <
     size_t USER_WIDTH = 1
 >
 struct axis_ptr {
-    sig_t(*tdata , DATA_WIDTH-1  , 0) = NULL;
-    sig_t(*tkeep , DATA_WIDTH/8-1, 0) = NULL;
-    sig_t(*tstrb , DATA_WIDTH/8-1, 0) = NULL;
-    sig_t(*tid   , ID_WIDTH-1    , 0) = NULL;
-    sig_t(*tdest , DEST_WIDTH-1  , 0) = NULL;
-    sig_t(*tuser , USER_WIDTH-1  , 0) = NULL;
-    sig_t(*tlast , 0             , 0) = NULL;
-    sig_t(*tvalid, 0             , 0) = NULL;
-    sig_t(*tready, 0             , 0) = NULL;
+    sig_io(*tdata , DATA_WIDTH-1  , 0) = NULL;
+    sig_io(*tkeep , DATA_WIDTH/8-1, 0) = NULL;
+    sig_io(*tstrb , DATA_WIDTH/8-1, 0) = NULL;
+    sig_io(*tid   , ID_WIDTH-1    , 0) = NULL;
+    sig_io(*tdest , DEST_WIDTH-1  , 0) = NULL;
+    sig_io(*tuser , USER_WIDTH-1  , 0) = NULL;
+    sig_io(*tlast , 0             , 0) = NULL;
+    sig_io(*tvalid, 0             , 0) = NULL;
+    sig_io(*tready, 0             , 0) = NULL;
 
     /// @brief Check if all signal pointers are assigned
     bool check() {

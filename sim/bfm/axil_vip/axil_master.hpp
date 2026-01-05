@@ -48,6 +48,16 @@ public:
     uint64_t current_wr_data;
     uint64_t current_rd_addr;
 
+    // Registered inputs
+    bool awready_i;
+    bool wready_i;
+    bool bvalid_i;
+    uint8_t bresp_i;
+    bool arready_i;
+    bool rvalid_i;
+    uint64_t rdata_i;
+    uint8_t rresp_i;
+
     /// @brief Constructor
     axil_master(axil_master_ptr<DATA_WIDTH, ADDR_WIDTH> port) : port(port) {
         clear();
@@ -58,6 +68,15 @@ public:
         b_hs = false;
         ar_hs = false;
         r_hs = false;
+
+        awready_i = false;
+        wready_i = false;
+        bvalid_i = false;
+        bresp_i = 0;
+        arready_i = false;
+        rvalid_i = false;
+        rdata_i = 0;
+        rresp_i = 0;
     }
 
     /// @brief Clear all signals
@@ -139,8 +158,19 @@ public:
         rd_active = false;
     }
 
-    /// @brief Master simulation tick function
-    void tick() {
+    /// @brief Cycle tick
+    void update_input() {
+        awready_i = *(port.awready);
+        wready_i  = *(port.wready);
+        bvalid_i  = *(port.bvalid);
+        bresp_i   = *(port.bresp);
+        arready_i = *(port.arready);
+        rvalid_i  = *(port.rvalid);
+        rdata_i   = *(port.rdata);
+        rresp_i   = *(port.rresp);
+    }
+
+    void update_output() {
         // 1. Process delayed clears from previous cycle handshakes
         if (aw_hs) { waddr_clr(); aw_hs = false; }
         if (w_hs)  { wdata_clr(); rresp_set(); w_hs = false; }
@@ -150,18 +180,18 @@ public:
 
         // 2. Detect Handshakes (Current Cycle)
         // Write Address
-        if (*(port.awready) && *(port.awvalid) && !aw_hs) {
+        if (awready_i && *(port.awvalid) && !aw_hs) {
             aw_hs = true;
         }
 
         // Write Data
-        if (*(port.wready) && *(port.wvalid) && !w_hs) {
+        if (wready_i && *(port.wvalid) && !w_hs) {
             w_hs = true;
         }
 
         // Write Response
-        if (*(port.bready) && *(port.bvalid) && !b_hs) {
-            if (*(port.bresp) != OKAY) {
+        if (*(port.bready) && bvalid_i && !b_hs) {
+            if (bresp_i != OKAY) {
                 std::cout << "[AXIL-MST][WARN] Write response not OKAY!" << std::endl;
             }
             b_hs = true;
@@ -171,15 +201,15 @@ public:
         }
 
         // Read Address
-        if (*(port.arready) && *(port.arvalid) && !ar_hs) {
+        if (arready_i && *(port.arvalid) && !ar_hs) {
             ar_hs = true;
         }
 
         // Read Data
-        if (*(port.rready) && *(port.rvalid) && !r_hs) {
-            uint64_t data = *(port.rdata);
+        if (*(port.rready) && rvalid_i && !r_hs) {
+            uint64_t data = rdata_i;
             rd_data_q.push(data);
-            if (*(port.rresp) != OKAY) {
+            if (rresp_i != OKAY) {
                 std::cout << "[AXIL-MST][WARN] Read response not OKAY!" << std::endl;
             }
             r_hs = true;
