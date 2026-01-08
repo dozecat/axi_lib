@@ -45,6 +45,7 @@ public:
     uint32_t w_beat_count;
     bool w_done_pending;
     std::vector<uint8_t> w_data_accum;
+    bool w_wait_next;
 
     bool ar_latch;
     bool r_active;
@@ -113,6 +114,7 @@ public:
         aw_latch = false;
         w_active = false;
         w_done_pending = false;
+        w_wait_next = false;
         ar_latch = false;
         r_active = false;
         r_done_pending = false;
@@ -240,33 +242,39 @@ public:
         }
 
         if (w_active) {
-            *(port.wready) = true;
-            if (wvalid_i) {
-                size_t bytes_per_beat = DATA_WIDTH/8;
-                uint64_t base_addr = get_addr(aw_addr, w_beat_count, aw_len, aw_burst, bytes_per_beat);
-                
-                std::vector<uint8_t> beat_data;
-                signal_get(&wdata_i, beat_data, bytes_per_beat);
+            if (w_wait_next) {
+                 *(port.wready) = false;
+                 w_wait_next = false;
+            } else {
+                *(port.wready) = true;
+                if (wvalid_i) {
+                    size_t bytes_per_beat = DATA_WIDTH/8;
+                    uint64_t base_addr = get_addr(aw_addr, w_beat_count, aw_len, aw_burst, bytes_per_beat);
+                    
+                    std::vector<uint8_t> beat_data;
+                    signal_get(&wdata_i, beat_data, bytes_per_beat);
 
-                // Get strobes
-                std::vector<uint8_t> strb_vec;
-                size_t strb_width_bytes = (bytes_per_beat + 7) / 8;
-                signal_get(&wstrb_i, strb_vec, strb_width_bytes);
+                    // Get strobes
+                    std::vector<uint8_t> strb_vec;
+                    size_t strb_width_bytes = (bytes_per_beat + 7) / 8;
+                    signal_get(&wstrb_i, strb_vec, strb_width_bytes);
 
-                for (size_t i=0; i<bytes_per_beat; i++) {
-                    bool strb_bit = (strb_vec[i/8] >> (i%8)) & 1;
-                    if (strb_bit) {
-                        w_data_accum.push_back(beat_data[i]);
-                        mem[base_addr + i] = beat_data[i];
+                    for (size_t i=0; i<bytes_per_beat; i++) {
+                        bool strb_bit = (strb_vec[i/8] >> (i%8)) & 1;
+                        if (strb_bit) {
+                            w_data_accum.push_back(beat_data[i]);
+                            mem[base_addr + i] = beat_data[i];
+                        }
                     }
-                }
-                
-                w_beat_count++;
-                
-                if (wlast_i || w_beat_count > aw_len) { // awlen is 0-based
-                    w_done_pending = true;
-                    // Keep wready=1 for this cycle so Master sees it
-                    return;
+                    
+                    w_beat_count++;
+                    w_wait_next = true;
+                    
+                    if (wlast_i || w_beat_count > aw_len) { // awlen is 0-based
+                        w_done_pending = true;
+                        // Keep wready=1 for this cycle so Master sees it
+                        return;
+                    }
                 }
             }
         } else {

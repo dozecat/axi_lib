@@ -332,24 +332,26 @@ public:
             write_trans& t = wr_q.front();
 
             // AW Handshake
-            if (!aw_hs && awready_i && *(port.awvalid)) {
-                aw_hs = true;
-            } else if (aw_hs) {
-                waddr_clr();
+            if (!aw_hs) {
+                if (awready_i && *(port.awvalid)) {
+                    aw_hs = true;
+                    waddr_clr();
+                }
             }
 
             // W Handshake
-            if (!w_hs && wready_i && *(port.wvalid)) {
-                w_beat_count++;
-                if (w_beat_count > t.len) {
-                    w_hs = true;
-                } else {
-                    // Next beat
-                    bool last = (w_beat_count == t.len);
-                    wdata_set(t.data, w_beat_count, last);
+            if (!w_hs) {
+                if (wready_i && *(port.wvalid)) {
+                    w_beat_count++;
+                    if (w_beat_count > t.len) {
+                        w_hs = true;
+                        wdata_clr();
+                    } else {
+                        // Next beat
+                        bool last = (w_beat_count == t.len);
+                        wdata_set(t.data, w_beat_count, last);
+                    }
                 }
-            } else if (w_hs) {
-                wdata_clr();
             }
 
             // B Handshake
@@ -364,11 +366,11 @@ public:
                                   << "  SIZE:" << t.data.size() << "  DATA:" << std::endl;
                         print_data(t.data);
                         std::cout << std::endl;
+                        
+                        rresp_clr();
+                        wr_q.pop(); // Transaction done
+                        wr_active = false; // Reset active flag
                     }
-                } else {
-                    rresp_clr();
-                    wr_q.pop(); // Transaction done
-                    wr_active = false; // Reset active flag
                 }
             }
         }
@@ -388,36 +390,39 @@ public:
 
             // AR Handshake
             bool ar_hs_edge = false;
-            if (!ar_hs && arready_i && *(port.arvalid)) {
-                ar_hs = true;
-                ar_hs_edge = true;
-                rdata_set();
-            } else if (ar_hs) {
-                raddr_clr();
+            if (!ar_hs) {
+                if (arready_i && *(port.arvalid)) {
+                    ar_hs = true;
+                    ar_hs_edge = true;
+                    rdata_set();
+                    raddr_clr();
+                }
             }
 
             // R Handshake
             if (ar_hs && !ar_hs_edge) {
-                if (!r_hs && rvalid_i && *(port.rready)) {
-                    size_t bytes_per_beat = DATA_WIDTH/8;
-                    std::vector<uint8_t> beat_data;
-                    signal_get(&rdata_i, beat_data, bytes_per_beat);
-                    current_rd_burst.insert(current_rd_burst.end(), beat_data.begin(), beat_data.end());
+                if (!r_hs) {
+                    if (rvalid_i && *(port.rready)) {
+                        size_t bytes_per_beat = DATA_WIDTH/8;
+                        std::vector<uint8_t> beat_data;
+                        signal_get(&rdata_i, beat_data, bytes_per_beat);
+                        current_rd_burst.insert(current_rd_burst.end(), beat_data.begin(), beat_data.end());
 
-                    if (rlast_i) {
-                        r_hs = true;
-                        rd_data_q.push(current_rd_burst);
-                        std::cout << "[AXI-MST] " << burst_to_string(t.burst) << " RD success !" << std::endl;
-                        std::cout << "ADDR:0x" << std::hex << t.addr 
-                                  << "  LEN:" << std::dec << t.len 
-                                  << "  SIZE:" << current_rd_burst.size() << "  DATA:" << std::endl;
-                        print_data(current_rd_burst);
-                        std::cout << std::endl;
+                        if (rlast_i) {
+                            r_hs = true;
+                            rd_data_q.push(current_rd_burst);
+                            std::cout << "[AXI-MST] " << burst_to_string(t.burst) << " RD success !" << std::endl;
+                            std::cout << "ADDR:0x" << std::hex << t.addr 
+                                      << "  LEN:" << std::dec << t.len 
+                                      << "  SIZE:" << current_rd_burst.size() << "  DATA:" << std::endl;
+                            print_data(current_rd_burst);
+                            std::cout << std::endl;
+
+                            rdata_clr();
+                            rd_active = false;
+                            rd_q.pop();
+                        }
                     }
-                } else if (r_hs) {
-                    rdata_clr();
-                    rd_active = false;
-                    rd_q.pop();
                 }
             }
         }
