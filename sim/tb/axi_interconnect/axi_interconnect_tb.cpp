@@ -1,3 +1,21 @@
+/******************************************************************************
+ * Copyright (C) 2025 dozecat. All rights reserved.
+ * SPDX-License-Identifier: MIT
+ *
+ * @file        axil_interconnect_tb.cpp
+ * @brief       AXI4 Interconnect Testbench (C++)
+ * @see         https://github.com/dozecat/axi_lib
+ *
+ * @details     Verilator C++ TB for AXI4 Interconnect.
+ *              VIP: `axi_ptr.hpp`, `axi.hpp`
+ *              (include dirs from `sim/bfm/axi`).
+ *
+ * Modification History:
+ * Ver   Who  Date        Changes
+ * ----  ---- ----------  -----------------------------------------------------
+ * 1.0        2026/05/01  Initial release
+ ******************************************************************************/
+
 #include "Vaxi_interconnect_tb.h"
 #include "verilated.h"
 #include "verilated_vcd_c.h"

@@ -10,7 +10,7 @@
 // Parameter ranges:
 //   WIDTH      > 0
 //   DEPTH      power-of-2, >= 2
-//   FWFT       "true" for first-word fall-through, "FALSE" for registered read
+//   FWFT       "true" for first-word fall-through, "false" for registered read
 //   RAM_STYLE  Xilinx:"block","distributed" | Altera:"M9K","M20K","MLAB","logic"
 //
 // https://github.com/dozecat/memory_lib
@@ -23,8 +23,8 @@ module async_fifo
 #(
    parameter WIDTH            = 8,
    parameter DEPTH            = 1024,
-   parameter FWFT             = "FALSE",
-   parameter RAM_STYLE        = "block"
+   parameter FWFT             = "false",
+   parameter RAM_STYLE        = "distributed"
 )(
    input  wire                 rst,
 
@@ -44,9 +44,9 @@ module async_fifo
 );
 
 // parameters and width constants
-localparam AWID = $clog2(DEPTH);              // memory address width
-localparam PTRW = AWID + 1;                   // pointer width (extra MSB for full/empty)
-localparam LVLW = $clog2(DEPTH + 1);          // level output width (0..DEPTH)
+localparam AWID = $clog2(DEPTH);       // memory address width
+localparam PTRW = AWID + 1;            // pointer width (extra MSB for full/empty)
+localparam LVLW = $clog2(DEPTH + 1);   // level output width (0..DEPTH)
 
 localparam [PTRW-1:0] PTR_ZERO = {PTRW{1'b0}};
 localparam [PTRW-1:0] PTR_ONE  = {{PTRW-1{1'b0}}, 1'b1};

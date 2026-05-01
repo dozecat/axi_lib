@@ -1,15 +1,15 @@
 //*****************************************************************************
-// Copyright (C) 2025 dozecat. All rights reserved.
+// Copyright (C) 2026 dozecat. All rights reserved.
 // SPDX-License-Identifier: MIT
 // 
 // File:        axil_interconnect.sv
-// Description: AXI4-Lite Crossbar Interconnect
+// Description: AXI4-Lite Interconnect
 // Repository:  https://github.com/dozecat/axi_lib.git
 // 
 // Modification History:
 // Ver   Who       Date        Changes
 // ----  ----  ----------  ----------------------------------------------------
-// 1.0         2025/12/25  Initial release
+// 1.0         2026/5/1    Initial release
 //*****************************************************************************
 
 `timescale 1ns / 1ps
@@ -166,7 +166,7 @@ generate
          sync_fifo #(
             .WIDTH               ( AWCH_WIDTH ),
             .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_aw (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -189,7 +189,7 @@ generate
          sync_fifo #(
             .WIDTH               ( WCH_WIDTH ),
             .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_w (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -212,7 +212,7 @@ generate
          sync_fifo #(
             .WIDTH               ( BCH_WIDTH ),
             .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_b (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -236,7 +236,7 @@ generate
          sync_fifo #(
             .WIDTH               ( ARCH_WIDTH ),
             .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_ar (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -259,7 +259,7 @@ generate
          sync_fifo #(
             .WIDTH               ( RCH_WIDTH ),
             .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_r (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -340,7 +340,7 @@ generate
       sync_fifo #(
          .WIDTH               ( SLV_NUM ),
          .DEPTH               ( TRK_DEPTH ),
-         .FWFT                ( "TRUE" )
+         .FWFT                ( "true" )
       ) u_wtrk (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
@@ -358,7 +358,7 @@ generate
       sync_fifo #(
          .WIDTH               ( SLV_NUM ),
          .DEPTH               ( TRK_DEPTH ),
-         .FWFT                ( "TRUE" )
+         .FWFT                ( "true" )
       ) u_btrk (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
@@ -458,7 +458,7 @@ generate
       sync_fifo #(
          .WIDTH               ( SLV_NUM ),
          .DEPTH               ( TRK_DEPTH ),
-         .FWFT                ( "TRUE" )
+         .FWFT                ( "true" )
       ) u_rtrk (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
@@ -616,7 +616,7 @@ generate
       sync_fifo #(
          .WIDTH               ( MST_NUM ),
          .DEPTH               ( TRK_DEPTH ),
-         .FWFT                ( "TRUE" )
+         .FWFT                ( "true" )
       ) u_awgnt (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
@@ -634,7 +634,7 @@ generate
       sync_fifo #(
          .WIDTH               ( MST_NUM ),
          .DEPTH               ( TRK_DEPTH ),
-         .FWFT                ( "TRUE" )
+         .FWFT                ( "true" )
       ) u_btrk (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
@@ -762,7 +762,7 @@ generate
       sync_fifo #(
          .WIDTH               ( MST_NUM ),
          .DEPTH               ( TRK_DEPTH ),
-         .FWFT                ( "TRUE" )
+         .FWFT                ( "true" )
       ) u_rtrk (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
@@ -839,7 +839,7 @@ generate
          sync_fifo #(
             .WIDTH               ( AWCH_WIDTH ),
             .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_aw (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -864,7 +864,7 @@ generate
          sync_fifo #(
             .WIDTH               ( WCH_WIDTH ),
             .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_w (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -887,7 +887,7 @@ generate
          sync_fifo #(
             .WIDTH               ( BCH_WIDTH ),
             .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_b (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -910,7 +910,7 @@ generate
          sync_fifo #(
             .WIDTH               ( ARCH_WIDTH ),
             .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_ar (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -935,7 +935,7 @@ generate
          sync_fifo #(
             .WIDTH               ( RCH_WIDTH ),
             .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_r (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),

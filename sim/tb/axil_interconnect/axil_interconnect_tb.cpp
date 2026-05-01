@@ -6,14 +6,14 @@
  * @brief       AXI4-Lite Interconnect Testbench (C++)
  * @see         https://github.com/dozecat/axi_lib
  *
- * @details     Verilator C++ TB for AXI4-Lite Crossbar Interconnect.
+ * @details     Verilator C++ TB for AXI4-Lite Interconnect.
  *              VIP: `axil_ptr.hpp`, `axil.hpp`
  *              (include dirs from `sim/bfm/axil`).
  *
  * Modification History:
  * Ver   Who  Date        Changes
  * ----  ---- ----------  -----------------------------------------------------
- * 1.0        2025/12/25  Initial release
+ * 1.0        2026/05/01  Initial release
  ******************************************************************************/
 
 #include "Vaxil_interconnect_tb.h"

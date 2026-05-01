@@ -9,7 +9,7 @@
 // Parameter ranges:
 //   WIDTH      > 0
 //   DEPTH      power-of-2, >= 2
-//   FWFT       "TRUE" for first-word fall-through, "FALSE" for registered read
+//   FWFT       "true" for first-word fall-through, "false" for registered read
 //   RAM_STYLE  Xilinx:"block","distributed" | Altera:"M9K","M20K","MLAB","logic"
 //
 // https://github.com/dozecat/memory_lib
@@ -22,8 +22,8 @@ module sync_fifo
 #(
    parameter WIDTH            = 8,
    parameter DEPTH            = 16,
-   parameter FWFT             = "FALSE",
-   parameter RAM_STYLE        = "block"
+   parameter FWFT             = "false",
+   parameter RAM_STYLE        = "distributed"
 )(
    input  wire                rst,
    input  wire                clk,
@@ -152,7 +152,7 @@ end
 
 // read data mux
 generate
-   if (FWFT == "TRUE") begin : fwft
+   if (FWFT == "true") begin : fwft
       always @(*) begin
          rd_data_mem = mem[rptr[AWID-1:0]];
       end

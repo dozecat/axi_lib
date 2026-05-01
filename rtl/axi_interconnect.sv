@@ -1,3 +1,16 @@
+//*****************************************************************************
+// Copyright (C) 2026 dozecat. All rights reserved.
+// SPDX-License-Identifier: MIT
+// 
+// File:        axi_interconnect.sv
+// Description: AXI4 Interconnect
+// Repository:  https://github.com/dozecat/axi_lib.git
+// 
+// Modification History:
+// Ver   Who       Date        Changes
+// ----  ----  ----------  ----------------------------------------------------
+// 1.0         2026/5/1    Initial release
+//*****************************************************************************
 `timescale 1ns / 1ps
 `default_nettype none
 
@@ -182,7 +195,7 @@ generate
          sync_fifo #(
             .WIDTH               ( AWCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_aw (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -204,7 +217,7 @@ generate
          sync_fifo #(
             .WIDTH               ( WCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_w (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -224,7 +237,7 @@ generate
          sync_fifo #(
             .WIDTH               ( BCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_b (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -244,7 +257,7 @@ generate
          sync_fifo #(
             .WIDTH               ( ARCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_ar (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -266,7 +279,7 @@ generate
          sync_fifo #(
             .WIDTH               ( RCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_r (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -823,7 +836,7 @@ generate
          sync_fifo #(
             .WIDTH               ( AWCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_aw (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -848,7 +861,7 @@ generate
          sync_fifo #(
             .WIDTH               ( WCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_w (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -869,7 +882,7 @@ generate
          sync_fifo #(
             .WIDTH               ( BCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_b (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -889,7 +902,7 @@ generate
          sync_fifo #(
             .WIDTH               ( ARCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_ar (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -914,7 +927,7 @@ generate
          sync_fifo #(
             .WIDTH               ( RCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "TRUE" )
+            .FWFT                ( "true" )
          ) u_r (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
