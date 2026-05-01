@@ -10,7 +10,7 @@
 // Parameter ranges:
 //   WIDTH      > 0
 //   DEPTH      power-of-2, >= 2
-//   FWFT       "TRUE" for first-word fall-through, "FALSE" for registered read
+//   FWFT       "true" for first-word fall-through, "FALSE" for registered read
 //   RAM_STYLE  Xilinx:"block","distributed" | Altera:"M9K","M20K","MLAB","logic"
 //
 // https://github.com/dozecat/memory_lib
@@ -74,16 +74,16 @@ endfunction
 // pointer registers
 reg [PTRW-1:0] wr_ptr;
 reg [PTRW-1:0] wr_gray;
-(* ASYNC_REG = "TRUE" *)
+(* ASYNC_REG = "true" *)
 reg [PTRW-1:0] wr_gray_ms;
-(* ASYNC_REG = "TRUE" *)
+(* ASYNC_REG = "true" *)
 reg [PTRW-1:0] wr_gray_rd;
 
 reg [PTRW-1:0] rd_ptr;
 reg [PTRW-1:0] rd_gray;
-(* ASYNC_REG = "TRUE" *)
+(* ASYNC_REG = "true" *)
 reg [PTRW-1:0] rd_gray_ms;
-(* ASYNC_REG = "TRUE" *)
+(* ASYNC_REG = "true" *)
 reg [PTRW-1:0] rd_gray_wr;
 
 wire [PTRW-1:0] rd_ptr_bin = gray2bin(rd_gray_wr);
@@ -178,7 +178,7 @@ end
 
 // memory read
 generate
-   if (FWFT == "TRUE") begin : fwft
+   if (FWFT == "true") begin : fwft
       always @(posedge rd_clk) begin
          if (rd_en && !rd_empty)
             rd_data <= mem[rd_ptr[AWID-1:0] + 1];

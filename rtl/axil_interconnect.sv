@@ -51,6 +51,7 @@ localparam INTF_ADDR_WIDTH = slv_axil[0].ADDR_WIDTH;
 localparam INTF_DATA_WIDTH = slv_axil[0].DATA_WIDTH;
 
 // Internal flat channel signals
+genvar i, j;
 logic [MST_NUM          -1:0]    i_awvalid;
 logic [MST_NUM          -1:0]    i_awready;
 logic [MST_NUM*AWCH_WIDTH -1:0]  i_awch;
@@ -112,13 +113,36 @@ logic [MST_NUM*SLV_NUM   -1:0]   m2s_rready;
 logic [MST_NUM           -1:0]   aw_misrouting;
 logic [MST_NUM           -1:0]   ar_misrouting;
 
-genvar i, j;
-
 initial begin
    if (ADDR_WIDTH != INTF_ADDR_WIDTH)
       $error("ADDR_WIDTH mismatch: module param %0d != if_axil.ADDR_WIDTH %0d", ADDR_WIDTH, INTF_ADDR_WIDTH);
+end
+
+initial begin
    if (DATA_WIDTH != INTF_DATA_WIDTH)
       $error("DATA_WIDTH mismatch: module param %0d != if_axil.DATA_WIDTH %0d", DATA_WIDTH, INTF_DATA_WIDTH);
+end
+
+initial begin
+   for (integer m = 0; m < MST_NUM; m++) begin
+      if (MST_BUF_EN[m]) begin
+         if (MST_BUF_DEPTH[m*16+:16] < 2)
+            $error("MST_BUF_EN[%0d] enabled but MST_BUF_DEPTH[%0d]=%0d (< 2)", m, m, MST_BUF_DEPTH[m*16+:16]);
+         if ((MST_BUF_DEPTH[m*16+:16] & (MST_BUF_DEPTH[m*16+:16] - 1)) != 0)
+            $error("MST_BUF_EN[%0d] enabled but MST_BUF_DEPTH[%0d]=%0d (not power-of-2)", m, m, MST_BUF_DEPTH[m*16+:16]);
+      end
+   end
+end
+
+initial begin
+   for (integer s = 0; s < SLV_NUM; s++) begin
+      if (SLV_BUF_EN[s]) begin
+         if (SLV_BUF_DEPTH[s*16+:16] < 2)
+            $error("SLV_BUF_EN[%0d] enabled but SLV_BUF_DEPTH[%0d]=%0d (< 2)", s, s, SLV_BUF_DEPTH[s*16+:16]);
+         if ((SLV_BUF_DEPTH[s*16+:16] & (SLV_BUF_DEPTH[s*16+:16] - 1)) != 0)
+            $error("SLV_BUF_EN[%0d] enabled but SLV_BUF_DEPTH[%0d]=%0d (not power-of-2)", s, s, SLV_BUF_DEPTH[s*16+:16]);
+      end
+   end
 end
 
 // SLAVE INTERFACE (per master)
@@ -205,6 +229,7 @@ generate
 
          assign i_bready[i] = !b_full;
          assign slv_axil[i].bvalid = !b_empty;
+         assign {slv_axil[i].bresp} = bch;
 
          wire ar_full, ar_empty;
 
@@ -251,6 +276,7 @@ generate
 
          assign i_rready[i] = !r_full;
          assign slv_axil[i].rvalid = !r_empty;
+         assign {slv_axil[i].rdata, slv_axil[i].rresp} = rch;
 
       end else begin : buffer_off
 
@@ -558,7 +584,17 @@ generate
          end
       end
 
-      assign o_awvalid[j] = |aw_grant;
+      logic o_awvalid_sel;
+      always_comb begin
+         o_awvalid_sel = 1'b0;
+         for (int k = 0; k < MST_NUM; k++) begin
+            if (aw_grant[k] && s2m_awvalid[j*MST_NUM+k]) begin
+               o_awvalid_sel = 1'b1;
+               break;
+            end
+         end
+      end
+      assign o_awvalid[j] = o_awvalid_sel;
 
       always_comb begin
          o_awch[j*AWCH_WIDTH+:AWCH_WIDTH] = '0;
@@ -571,7 +607,7 @@ generate
 
       always_comb begin
          for (int k = 0; k < MST_NUM; k++) begin
-            s2m_awready[j*MST_NUM+k] = aw_grant[k] && o_awready[j];
+            s2m_awready[j*MST_NUM+k] = aw_grant[k] && s2m_awvalid[j*MST_NUM+k] && o_awready[j];
          end
       end
 
@@ -584,7 +620,7 @@ generate
       ) u_awgnt (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
-         .wr_en               ( |aw_grant && o_awready[j] ),
+         .wr_en               ( o_awvalid[j] && o_awready[j] ),
          .wr_data             ( aw_grant ),
          .full                ( aw_gnt_full ),
          .rd_en               ( o_wvalid[j] && o_wready[j] ),
@@ -602,7 +638,7 @@ generate
       ) u_btrk (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
-         .wr_en               ( |aw_grant && o_awready[j] ),
+         .wr_en               ( o_awvalid[j] && o_awready[j] ),
          .wr_data             ( aw_grant ),
          .full                ( b_trk_full ),
          .rd_en               ( o_bvalid[j] && o_bready[j] ),
@@ -678,7 +714,8 @@ generate
       genvar ark;
       for (ark = 0; ark < MST_NUM; ark++) begin
          assign ar_req_masked[ark] = s2m_arvalid[j*MST_NUM+ark] &&
-                                     !(ar_grant[ark] && o_arready[j]);
+                                    !(ar_grant[ark] && o_arready[j]) &&
+                                    !r_trk_full;
       end
 
       arbiter #(
@@ -694,7 +731,17 @@ generate
          .selsect             ( )
       );
 
-      assign o_arvalid[j] = |ar_grant;
+      logic o_arvalid_sel;
+      always_comb begin
+         o_arvalid_sel = 1'b0;
+         for (int k = 0; k < MST_NUM; k++) begin
+            if (ar_grant[k] && s2m_arvalid[j*MST_NUM+k]) begin
+               o_arvalid_sel = 1'b1;
+               break;
+            end
+         end
+      end
+      assign o_arvalid[j] = o_arvalid_sel;
       always_comb begin
          o_arch[j*ARCH_WIDTH+:ARCH_WIDTH] = '0;
          for (int k = 0; k < MST_NUM; k++) begin
@@ -706,7 +753,7 @@ generate
 
       always_comb begin
          for (int k = 0; k < MST_NUM; k++) begin
-            s2m_arready[j*MST_NUM+k] = ar_grant[k] && o_arready[j];
+            s2m_arready[j*MST_NUM+k] = ar_grant[k] && s2m_arvalid[j*MST_NUM+k] && o_arready[j];
          end
       end
 
@@ -719,7 +766,7 @@ generate
       ) u_rtrk (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
-         .wr_en               ( |ar_grant && o_arready[j] ),
+         .wr_en               ( o_arvalid[j] && o_arready[j] ),
          .wr_data             ( ar_grant ),
          .full                ( r_trk_full ),
          .rd_en               ( o_rvalid[j] && o_rready[j] ),
@@ -780,6 +827,13 @@ generate
 
          localparam BUF_DEPTH = SLV_BUF_DEPTH[j*16+:16];
 
+         wire [AWCH_WIDTH-1:0] aw_rd;
+         wire [ARCH_WIDTH-1:0] ar_rd;
+         wire [ADDR_WIDTH-1:0] awaddr_buf = aw_rd[ADDR_WIDTH-1:0];
+         wire [ADDR_WIDTH-1:0] araddr_buf = ar_rd[ADDR_WIDTH-1:0];
+         wire [ADDR_WIDTH-1:0] awaddr_xlat_buf = SLV_KEEP_BASE[j] ? awaddr_buf : (awaddr_buf - base);
+         wire [ADDR_WIDTH-1:0] araddr_xlat_buf = SLV_KEEP_BASE[j] ? araddr_buf : (araddr_buf - base);
+
          wire aw_full, aw_empty;
 
          sync_fifo #(
@@ -790,10 +844,10 @@ generate
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
             .wr_en               ( o_awvalid[j] && !aw_full ),
-            .wr_data             ( {o_awch[j*AWCH_WIDTH+ADDR_WIDTH+:3], awaddr_xlat} ),
+            .wr_data             ( o_awch[j*AWCH_WIDTH+:AWCH_WIDTH] ),
             .full                ( aw_full ),
             .rd_en               ( mst_axil[j].awready ),
-            .rd_data             ( {mst_axil[j].awprot, mst_axil[j].awaddr} ),
+            .rd_data             ( aw_rd ),
             .empty               ( aw_empty ),
             .overflow            ( ),
             .underflow           ( ),
@@ -802,6 +856,8 @@ generate
 
          assign mst_axil[j].awvalid = !aw_empty;
          assign o_awready[j]     = !aw_full;
+         assign mst_axil[j].awprot = aw_rd[AWCH_WIDTH-1:ADDR_WIDTH];
+         assign mst_axil[j].awaddr = awaddr_xlat_buf;
 
          wire w_full, w_empty;
 
@@ -859,10 +915,10 @@ generate
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
             .wr_en               ( o_arvalid[j] && !ar_full ),
-            .wr_data             ( {o_arch[j*ARCH_WIDTH+ADDR_WIDTH+:3], araddr_xlat} ),
+            .wr_data             ( o_arch[j*ARCH_WIDTH+:ARCH_WIDTH] ),
             .full                ( ar_full ),
             .rd_en               ( mst_axil[j].arready ),
-            .rd_data             ( {mst_axil[j].arprot, mst_axil[j].araddr} ),
+            .rd_data             ( ar_rd ),
             .empty               ( ar_empty ),
             .overflow            ( ),
             .underflow           ( ),
@@ -871,6 +927,8 @@ generate
 
          assign mst_axil[j].arvalid = !ar_empty;
          assign o_arready[j]     = !ar_full;
+         assign mst_axil[j].arprot = ar_rd[ARCH_WIDTH-1:ADDR_WIDTH];
+         assign mst_axil[j].araddr = araddr_xlat_buf;
 
          wire r_full, r_empty;
 

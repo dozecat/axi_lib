@@ -120,46 +120,47 @@ end
 
 // write pipeline
 always @(posedge clk) begin
-   wren_q   <= wren;
-   wr_data_q <= wr_data;
-   waddr_q  <= wptr[AWID-1:0];
+   if (rst) begin
+      wren_q <= 1'b0;
+      waddr_q <= {AWID{1'b0}};
+      wr_data_q <= {WIDTH{1'b0}};
+   end else begin
+      wren_q <= 1'b0;
+      if (wren) begin
+         wr_data_q <= wr_data;
+         waddr_q <= wptr[AWID-1:0];
+      end
+   end
 end
 
 always @(posedge clk) begin
-   if (wren_q)
-      mem[waddr_q] <= wr_data_q;
+   if (wren)
+      mem[wptr[AWID-1:0]] <= wr_data;
 end
 
 // read-after-write forwarding
 always @(posedge clk) begin
-   if (rden) begin
-      take_new <= ((rptr[AWID-1:0] == wptr[AWID-1:0]) && wren) ||
-                  ((rptr[AWID-1:0] == waddr_q) && wren_q);
+   if (rst) begin
+      take_new <= 1'b0;
+      rd_data_fwd <= {WIDTH{1'b0}};
+   end else begin
+      take_new <= ((rptr[AWID-1:0] == wptr[AWID-1:0]) && wren);
       if ((rptr[AWID-1:0] == wptr[AWID-1:0]) && wren)
          rd_data_fwd <= wr_data;
-      else if ((rptr[AWID-1:0] == waddr_q) && wren_q)
-         rd_data_fwd <= wr_data_q;
-    end else begin
-       take_new <= 1'b0;
-       if ((rptr[AWID-1:0] == wptr[AWID-1:0]) && wren)
-          rd_data_fwd <= wr_data;
-       else if ((rptr[AWID-1:0] == waddr_q) && wren_q)
-          rd_data_fwd <= wr_data_q;
-    end
+   end
 end
 
 // read data mux
 generate
    if (FWFT == "TRUE") begin : fwft
-      always @(posedge clk) begin
-         if (rden)
-            rd_data_mem <= mem[rptr[AWID-1:0] + 1];
-         else
-            rd_data_mem <= mem[rptr[AWID-1:0]];
+      always @(*) begin
+         rd_data_mem = mem[rptr[AWID-1:0]];
       end
    end else begin : registered
       always @(posedge clk) begin
-         if (rden)
+         if (rst)
+            rd_data_mem <= {WIDTH{1'b0}};
+         else if (rden)
             rd_data_mem <= mem[rptr[AWID-1:0]];
       end
    end
