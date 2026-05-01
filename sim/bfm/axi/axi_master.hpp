@@ -1,10 +1,10 @@
 /******************************************************************************
- * Copyright (C) 2025 WanderingKitsune. All rights reserved.
+ * Copyright (C) 2025 dozecat. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * @file        axi_master.hpp
  * @brief       AXI4 Master VIP
- * @see         https://github.com/WanderingKitsune/axi_lib.git
+ * @see         https://github.com/dozecat/vaxivip
  *
  * @details     This module implements the Master VIP for AXI4 protocol verification.
  *
@@ -17,11 +17,10 @@
 #ifndef AXI_MASTER_HPP
 #define AXI_MASTER_HPP
 
-#include "axi.hpp"
+#include "axi_ptr.hpp"
 #include "axi_common.hpp"
+#include "log.hpp"
 #include <queue>
-#include <vector>
-#include <iostream>
 #include <type_traits>
 
 /// @brief AXI Master BFM
@@ -32,6 +31,7 @@ template <
 >
 class axi_master {
 public:
+    Log log;
     axi_master_ptr<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH> port;
 
     /// @brief Constructor
@@ -73,7 +73,7 @@ public:
     /// @brief Write data using FIXED burst type
     /// @param addr Start address
     /// @param data Data to write
-    void write_fixed(uint64_t addr, const std::vector<uint8_t>& data) {
+    void write_fixed(uint64_t addr, const std::vector<uint8_t>& data, uint32_t id = 0) {
         if (data.empty()) return;
         write_trans t;
         t.addr = addr;
@@ -81,13 +81,14 @@ public:
         size_t bytes_per_beat = DATA_WIDTH/8;
         t.len = (data.size() + bytes_per_beat - 1) / bytes_per_beat - 1;
         t.burst = 0; // FIXED
+        t.id = id;
         wr_q.push(t);
     }
 
     /// @brief Write data using INCR burst type
     /// @param addr Start address
     /// @param data Data to write
-    void write_incr(uint64_t addr, const std::vector<uint8_t>& data) {
+    void write_incr(uint64_t addr, const std::vector<uint8_t>& data, uint32_t id = 0) {
         if (data.empty()) return;
         write_trans t;
         t.addr = addr;
@@ -95,13 +96,14 @@ public:
         size_t bytes_per_beat = DATA_WIDTH/8;
         t.len = (data.size() + bytes_per_beat - 1) / bytes_per_beat - 1;
         t.burst = 1; // INCR
+        t.id = id;
         wr_q.push(t);
     }
 
     /// @brief Write data using WRAP burst type
     /// @param addr Start address
     /// @param data Data to write
-    void write_wrap(uint64_t addr, const std::vector<uint8_t>& data) {
+    void write_wrap(uint64_t addr, const std::vector<uint8_t>& data, uint32_t id = 0) {
         if (data.empty()) return;
         write_trans t;
         t.addr = addr;
@@ -109,39 +111,55 @@ public:
         size_t bytes_per_beat = DATA_WIDTH/8;
         t.len = (data.size() + bytes_per_beat - 1) / bytes_per_beat - 1;
         t.burst = 2; // WRAP
+        t.id = id;
         wr_q.push(t);
     }
 
     /// @brief Request a read transaction (FIXED)
     /// @param addr Address
-    /// @param len Burst length (0-based)
-    void read_fixed(uint64_t addr, uint32_t len = 0) {
+    /// @param size Total number of bytes to read
+    void read_fixed(uint64_t addr, uint32_t size = DATA_WIDTH/8, uint32_t id = 0) {
         read_trans t;
         t.addr = addr;
-        t.len = len;
+        size_t bytes_per_beat = DATA_WIDTH/8;
+        uint32_t num_beats = (size + bytes_per_beat - 1) / bytes_per_beat;
+        if (num_beats == 0) num_beats = 1;
+        t.len = num_beats - 1;
         t.burst = 0; // FIXED
+        t.size = size;
+        t.id = id;
         rd_q.push(t);
     }
 
     /// @brief Request a read transaction (INCR)
     /// @param addr Address
-    /// @param len Burst length (0-based)
-    void read_incr(uint64_t addr, uint32_t len = 0) {
+    /// @param size Total number of bytes to read
+    void read_incr(uint64_t addr, uint32_t size = DATA_WIDTH/8, uint32_t id = 0) {
         read_trans t;
         t.addr = addr;
-        t.len = len;
+        size_t bytes_per_beat = DATA_WIDTH/8;
+        uint32_t num_beats = (size + bytes_per_beat - 1) / bytes_per_beat;
+        if (num_beats == 0) num_beats = 1;
+        t.len = num_beats - 1;
         t.burst = 1; // INCR
+        t.size = size;
+        t.id = id;
         rd_q.push(t);
     }
 
     /// @brief Request a read transaction (WRAP)
     /// @param addr Address
-    /// @param len Burst length (0-based)
-    void read_wrap(uint64_t addr, uint32_t len = 0) {
+    /// @param size Total number of bytes to read
+    void read_wrap(uint64_t addr, uint32_t size = DATA_WIDTH/8, uint32_t id = 0) {
         read_trans t;
         t.addr = addr;
-        t.len = len;
+        size_t bytes_per_beat = DATA_WIDTH/8;
+        uint32_t num_beats = (size + bytes_per_beat - 1) / bytes_per_beat;
+        if (num_beats == 0) num_beats = 1;
+        t.len = num_beats - 1;
         t.burst = 2; // WRAP
+        t.size = size;
+        t.id = id;
         rd_q.push(t);
     }
 
@@ -161,12 +179,15 @@ private:
         std::vector<uint8_t> data;
         uint32_t len; // Burst length (0-based, so 0 means 1 beat)
         uint8_t burst; // 0=FIXED, 1=INCR, 2=WRAP
+        uint32_t id;
     };
 
     struct read_trans {
         uint64_t addr;
         uint32_t len; // Burst length (0-based)
         uint8_t burst; // 0=FIXED, 1=INCR, 2=WRAP
+        uint32_t size; // Expected size in bytes
+        uint32_t id;
     };
 
     std::queue<write_trans> wr_q;
@@ -179,7 +200,7 @@ private:
 
     // Handshake flags
     bool aw_hs, w_hs, b_hs, ar_hs, r_hs;
-    
+
     // Burst tracking
     uint32_t w_beat_count;
     uint32_t r_beat_count;
@@ -205,12 +226,12 @@ private:
         return size;
     }
 
-    void waddr_set(uint64_t addr, uint32_t len, uint8_t burst) {
+    void waddr_set(uint64_t addr, uint32_t len, uint8_t burst, uint32_t id) {
         *(port.awaddr)  = addr;
         *(port.awvalid) = true;
         *(port.awburst) = burst;
         *(port.awcache) = 0;
-        *(port.awid)    = 0;
+        *(port.awid)    = id;
         *(port.awlen)   = len;
         *(port.awlock)  = 0;
         *(port.awprot)  = 0;
@@ -225,10 +246,10 @@ private:
         *(port.awlen)   = 0;
     }
 
-    void wdata_set(const std::vector<uint8_t>& data, uint32_t beat, bool last) {
+    void wdata_set(const std::vector<uint8_t>& data, uint32_t beat, bool last, uint32_t id) {
         size_t bytes_per_beat = DATA_WIDTH/8;
         size_t start_idx = beat * bytes_per_beat;
-        
+
         signal_set(port.wdata, data, start_idx, bytes_per_beat);
 
         // Calculate strobe based on valid data bytes in this beat
@@ -251,7 +272,7 @@ private:
 
         *(port.wvalid)  = true;
         *(port.wlast)   = last;
-        *(port.wid)     = 0;
+        *(port.wid)     = id;
     }
 
     void wdata_clr() {
@@ -270,12 +291,12 @@ private:
         wr_active = false;
     }
 
-    void raddr_set(uint64_t addr, uint32_t len, uint8_t burst) {
+    void raddr_set(uint64_t addr, uint32_t len, uint8_t burst, uint32_t id) {
         *(port.araddr)  = addr;
         *(port.arvalid) = true;
         *(port.arburst) = burst;
         *(port.arcache) = 0;
-        *(port.arid)    = 0;
+        *(port.arid)    = id;
         *(port.arlen)   = len;
         *(port.arlock)  = 0;
         *(port.arprot)  = 0;
@@ -324,10 +345,10 @@ public:
             aw_hs = false;
             w_hs = false;
             b_hs = false;
-            
+
             write_trans& t = wr_q.front();
-            waddr_set(t.addr, t.len, t.burst);
-            wdata_set(t.data, 0, (t.len == 0));
+            waddr_set(t.addr, t.len, t.burst, t.id);
+            wdata_set(t.data, 0, (t.len == 0), t.id);
         } else if (wr_active) {
             write_trans& t = wr_q.front();
 
@@ -349,7 +370,7 @@ public:
                     } else {
                         // Next beat
                         bool last = (w_beat_count == t.len);
-                        wdata_set(t.data, w_beat_count, last);
+                        wdata_set(t.data, w_beat_count, last, t.id);
                     }
                 }
             }
@@ -360,13 +381,14 @@ public:
                     rresp_set();
                     if (bvalid_i && *(port.bready)) {
                         b_hs = true;
-                        std::cout << "[AXI-MST] " << burst_to_string(t.burst) << " WR success !" << std::endl;
-                        std::cout << "ADDR:0x" << std::hex << t.addr 
-                                  << "  LEN:" << std::dec << t.len 
-                                  << "  SIZE:" << t.data.size() << "  DATA:" << std::endl;
-                        print_data(t.data);
-                        std::cout << std::endl;
-                        
+                        log.info("[AXI-MST] ", burst_to_string(t.burst), " WR success !");
+
+                        log.info("ADDR:0x", std::hex, t.addr,
+                           "  LEN:", std::dec, t.len,
+                           "  SIZE:", t.data.size(),
+                           "  ID:0x", std::hex, t.id);
+                        log.hexdump(t.data, t.addr);
+
                         rresp_clr();
                         wr_q.pop(); // Transaction done
                         wr_active = false; // Reset active flag
@@ -382,9 +404,9 @@ public:
             r_hs = false;
             r_beat_count = 0;
             current_rd_burst.clear();
-            
+
             read_trans& t = rd_q.front();
-            raddr_set(t.addr, t.len, t.burst);
+            raddr_set(t.addr, t.len, t.burst, t.id);
         } else if (rd_active) {
             read_trans& t = rd_q.front();
 
@@ -410,13 +432,19 @@ public:
 
                         if (rlast_i) {
                             r_hs = true;
+
+                            if (current_rd_burst.size() > t.size) {
+                                current_rd_burst.resize(t.size);
+                            }
+
                             rd_data_q.push(current_rd_burst);
-                            std::cout << "[AXI-MST] " << burst_to_string(t.burst) << " RD success !" << std::endl;
-                            std::cout << "ADDR:0x" << std::hex << t.addr 
-                                      << "  LEN:" << std::dec << t.len 
-                                      << "  SIZE:" << current_rd_burst.size() << "  DATA:" << std::endl;
-                            print_data(current_rd_burst);
-                            std::cout << std::endl;
+                            log.info("[AXI-MST] ", burst_to_string(t.burst), " RD success !");
+
+                            log.info("ADDR:0x", std::hex, t.addr,
+                                      "  LEN:", std::dec, t.len,
+                                      "  SIZE:", current_rd_burst.size(),
+                                      "  ID:0x", std::hex, t.id);
+                            log.hexdump(current_rd_burst, t.addr);
 
                             rdata_clr();
                             rd_active = false;

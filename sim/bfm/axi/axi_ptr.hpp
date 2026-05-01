@@ -1,10 +1,10 @@
 /******************************************************************************
- * Copyright (C) 2025 WanderingKitsune. All rights reserved.
+ * Copyright (C) 2025 dozecat. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
- * @file        axi.hpp
+ * @file        axi_ptr.hpp
  * @brief       AXI4 Interface Definitions
- * @see         https://github.com/WanderingKitsune/axi_lib.git
+ * @see         https://github.com/dozecat/vaxivip
  *
  * @details     This module implements the interface definitions for AXI4
  *              protocol verification.
@@ -15,8 +15,8 @@
  * 1.0        2025/12/26  Initial release
  ******************************************************************************/
 
-#ifndef AXI_HPP
-#define AXI_HPP
+#ifndef AXI_PTR_HPP
+#define AXI_PTR_HPP
 
 #include <cstdint>
 #include <cstring>
@@ -55,7 +55,7 @@ bool axi_check(const T& p) {
         (void*)p.rdata,  (void*)p.rid,     (void*)p.rlast,
         (void*)p.rready, (void*)p.rresp,   (void*)p.rvalid
     };
-    
+
     // Total signals: 12 (AW) + 6 (W) + 4 (B) + 12 (AR) + 6 (R) = 40
     for (int i = 0; i < 40; ++i) {
         if (ptrs[i] == NULL) return false;

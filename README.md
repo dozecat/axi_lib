@@ -41,7 +41,7 @@ This repository contains a lightweight verification library for **AXI4**, **AXI4
 - C++ Compiler (GCC/Clang) with C++11 support or higher
 - Make
 
-### 1. AXI4-Lite Example
+## 1. AXI4-Lite Example
 
 **Master Write/Read:**
 ```cpp

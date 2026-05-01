@@ -1,10 +1,10 @@
 //*****************************************************************************
-// Copyright (C) 2025 WanderingKitsune. All rights reserved.
+// Copyright (C) 2025 dozecat. All rights reserved.
 // SPDX-License-Identifier: MIT
 // 
 // File:        if_axil.sv
 // Description: AXI4-Lite Interface Definition
-// Repository:  https://github.com/WanderingKitsune/axi_lib.git
+// Repository:  https://github.com/dozecat/axi_lib.git
 // 
 // Modification History:
 // Ver   Who       Date        Changes

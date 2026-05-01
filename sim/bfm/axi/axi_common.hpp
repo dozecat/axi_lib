@@ -1,10 +1,10 @@
 /******************************************************************************
- * Copyright (C) 2025 WanderingKitsune. All rights reserved.
+ * Copyright (C) 2025 dozecat. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * @file        axi_common.hpp
  * @brief       AXI4 VIP Common Helpers
- * @see         https://github.com/WanderingKitsune/axi_lib.git
+ * @see         https://github.com/dozecat/vaxivip
  *
  * @details     Common helper functions for AXI4 VIP.
  *
@@ -22,6 +22,7 @@
 #include <string>
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <verilated.h>
 
 // Generic implementation for primitive types (CData, SData, IData, QData)
@@ -96,15 +97,6 @@ static std::string burst_to_string(uint8_t b) {
         case 2: return "WRAP";
         default: return "RSVD";
     }
-}
-
-// Helper to print data in hex dump format
-static void print_data(const std::vector<uint8_t>& data) {
-    for (size_t i = 0; i < data.size(); ++i) {
-        if (i > 0 && i % 16 == 0) std::cout << std::endl;
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)data[i] << " ";
-    }
-    std::cout << std::endl;
 }
 
 #endif

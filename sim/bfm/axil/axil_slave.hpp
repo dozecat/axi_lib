@@ -1,10 +1,10 @@
 /******************************************************************************
- * Copyright (C) 2025 WanderingKitsune. All rights reserved.
+ * Copyright (C) 2025 dozecat. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * @file        axil_slave.hpp
  * @brief       AXI4-Lite Slave VIP
- * @see         https://github.com/WanderingKitsune/axi_lib.git
+ * @see         https://github.com/dozecat/vaxivip
  *
  * @details     This module implements the Slave VIP for AXI4-Lite protocol verification.
  *
@@ -17,11 +17,9 @@
 #ifndef AXIL_SLAVE_HPP
 #define AXIL_SLAVE_HPP
 
-#include "axil.hpp"
-#include <cstdint>
+#include "axil_ptr.hpp"
+#include "log.hpp"
 #include <map>
-#include <iostream>
-#include <iomanip>
 
 /// @brief AXI4-Lite Slave BFM
 template <
@@ -30,6 +28,7 @@ template <
 >
 class axil_slave {
 public:
+    Log log;
     axil_slave_ptr<DATA_WIDTH, ADDR_WIDTH> port;              ///< Interface signal pointers
     std::map<uint64_t, uint64_t> mem;       ///< Memory storage
 
@@ -63,7 +62,7 @@ public:
         rd_addr_received = false;
         rd_data_sent = false;
         rd_data_reg = 0;
-        
+
         // Initialize inputs
         awvalid_i = false;
         awaddr_i = 0;
@@ -87,12 +86,14 @@ public:
     void update_input() {
         awvalid_i = *(port.awvalid);
         awaddr_i  = *(port.awaddr);
+
         wvalid_i  = *(port.wvalid);
         wdata_i   = *(port.wdata);
         wstrb_i   = *(port.wstrb);
         bready_i  = *(port.bready);
         arvalid_i = *(port.arvalid);
         araddr_i  = *(port.araddr);
+
         rready_i  = *(port.rready);
     }
 
@@ -113,9 +114,8 @@ public:
         // Write Response
         if (wr_addr_received && wr_data_received && !wr_resp_sent) {
             mem[wr_addr] = wr_data;
-            std::cout << "[AXIL-SLV] WR success !" << std::endl;
-            std::cout << "ADDR:0x" << std::hex << wr_addr 
-                      << "  DATA:0x" << wr_data << std::endl << std::endl;
+            log.info("[AXIL-SLV] WR success !");
+            log.info("ADDR:0x", std::hex, wr_addr, "  DATA:0x", wr_data);
             wr_resp_sent = true;
         } else if (wr_resp_sent && bready_i) {
             wr_resp_sent = false;
@@ -135,9 +135,8 @@ public:
             if (mem.count(rd_addr)) {
                 rdata = mem[rd_addr];
             }
-            std::cout << "[AXIL-SLV] RD success !" << std::endl;
-            std::cout << "ADDR:0x" << std::hex << rd_addr 
-                      << "  DATA:0x" << rdata << std::endl << std::endl;
+            log.info("[AXIL-SLV] RD success !");
+            log.info("ADDR:0x", std::hex, rd_addr, "  DATA:0x", rdata);
             rd_data_reg = rdata;
             rd_data_sent = true;
         } else if (rd_data_sent && rready_i) {
@@ -148,12 +147,12 @@ public:
         // 3. Drive Outputs
         *(port.awready) = !wr_addr_received;
         *(port.wready)  = !wr_data_received;
-        
+
         *(port.bvalid)  = wr_resp_sent;
         *(port.bresp)   = OKAY;
 
         *(port.arready) = !rd_addr_received;
-        
+
         *(port.rvalid)  = rd_data_sent;
         *(port.rdata)   = rd_data_reg;
         *(port.rresp)   = OKAY;

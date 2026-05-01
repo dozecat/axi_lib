@@ -1,10 +1,10 @@
 /******************************************************************************
- * Copyright (C) 2025 WanderingKitsune. All rights reserved.
+ * Copyright (C) 2025 dozecat. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
- * @file        axis.hpp
+ * @file        axis_prt.hpp
  * @brief       AXI4-Stream Interface Definitions
- * @see         https://github.com/WanderingKitsune/axi_lib.git
+ * @see         https://github.com/dozecat/vaxivip
  *
  * @details     This module implements the interface definitions for AXI4-Stream
  *              protocol verification.
@@ -15,8 +15,8 @@
  * 1.0        2025/12/25  Initial release
  ******************************************************************************/
 
-#ifndef AXIS_HPP
-#define AXIS_HPP
+#ifndef AXIS_PRT_HPP
+#define AXIS_PRT_HPP
 #include <cstdint>
 #include <cstring>
 #include "sig.hpp"
@@ -29,7 +29,7 @@ bool axis_check(const T& p) {
         (void*)p.tid,   (void*)p.tdest, (void*)p.tuser,
         (void*)p.tlast, (void*)p.tvalid,(void*)p.tready
     };
-    
+
     for (int i = 0; i < 9; ++i) {
         if (ptrs[i] == NULL) return false;
         for (int j = i + 1; j < 9; ++j) {

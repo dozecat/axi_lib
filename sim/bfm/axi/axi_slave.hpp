@@ -1,10 +1,10 @@
 /******************************************************************************
- * Copyright (C) 2025 WanderingKitsune. All rights reserved.
+ * Copyright (C) 2025 dozecat. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * @file        axi_slave.hpp
  * @brief       AXI4 Slave VIP
- * @see         https://github.com/WanderingKitsune/axi_lib.git
+ * @see         https://github.com/dozecat/vaxivip
  *
  * @details     This module implements the Slave VIP for AXI4 protocol verification.
  *
@@ -17,11 +17,10 @@
 #ifndef AXI_SLAVE_HPP
 #define AXI_SLAVE_HPP
 
-#include "axi.hpp"
+#include "axi_ptr.hpp"
 #include "axi_common.hpp"
+#include "log.hpp"
 #include <map>
-#include <vector>
-#include <iostream>
 
 /// @brief AXI Slave BFM
 template <
@@ -31,10 +30,11 @@ template <
 >
 class axi_slave {
 public:
+    Log log;
     axi_slave_ptr<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH> port;
 
     std::map<uint64_t, uint8_t> mem; // Byte-addressable memory
-    
+
     // State variables
     bool aw_latch;
     bool w_active;
@@ -54,7 +54,6 @@ public:
     uint32_t ar_id;
     uint8_t ar_burst;
     uint32_t r_beat_count;
-    bool r_done_pending;
     std::vector<uint8_t> r_data_accum;
 
     // Registered inputs
@@ -117,7 +116,6 @@ public:
         w_wait_next = false;
         ar_latch = false;
         r_active = false;
-        r_done_pending = false;
 
         signal_clr(&awaddr_i);
         awburst_i = 0;
@@ -164,9 +162,9 @@ public:
 
         *(port.arready) = false;
         *(port.rvalid)  = false;
-        
+
         signal_clr(port.rdata);
-        
+
         *(port.rresp)   = 0;
         *(port.rlast)   = false;
         *(port.rid)     = 0;
@@ -233,7 +231,7 @@ public:
             w_active = false;
             *(port.wready) = false;
             w_done_pending = false;
-            
+
             // Trigger B Phase
             *(port.bvalid) = true;
             *(port.bresp) = 0; // OKAY
@@ -250,7 +248,7 @@ public:
                 if (wvalid_i) {
                     size_t bytes_per_beat = DATA_WIDTH/8;
                     uint64_t base_addr = get_addr(aw_addr, w_beat_count, aw_len, aw_burst, bytes_per_beat);
-                    
+
                     std::vector<uint8_t> beat_data;
                     signal_get(&wdata_i, beat_data, bytes_per_beat);
 
@@ -266,10 +264,10 @@ public:
                             mem[base_addr + i] = beat_data[i];
                         }
                     }
-                    
+
                     w_beat_count++;
                     w_wait_next = true;
-                    
+
                     if (wlast_i || w_beat_count > aw_len) { // awlen is 0-based
                         w_done_pending = true;
                         // Keep wready=1 for this cycle so Master sees it
@@ -285,12 +283,13 @@ public:
         if (*(port.bvalid) && bready_i) {
             *(port.bvalid) = false;
             aw_latch = false; // Ready for next transaction
-            std::cout << "[AXI-SLV] " << burst_to_string(aw_burst) << " WR success !" << std::endl;
-            std::cout << "ADDR:0x" << std::hex << aw_addr 
-                      << "  LEN:" << std::dec << aw_len 
-                      << "  SIZE:" << w_data_accum.size() << "  DATA:" << std::endl;
-            print_data(w_data_accum);
-            std::cout << std::endl;
+            log.info("[AXI-SLV] ", burst_to_string(aw_burst), " WR success !");
+
+            log.info("ADDR:0x", std::hex, aw_addr,
+               "  LEN:", std::dec, aw_len,
+               "  SIZE:", w_data_accum.size(),
+               "  ID:0x", std::hex, aw_id);
+            log.hexdump(w_data_accum, aw_addr);
         }
 
         // Read Channel
@@ -312,28 +311,38 @@ public:
         }
 
         // R Phase
-        if (r_done_pending) {
-            r_active = false;
-            *(port.rvalid) = false;
-            *(port.rlast) = false;
-            ar_latch = false; // Ready for next transaction
-            r_done_pending = false;
-            std::cout << "[AXI-SLV] " << burst_to_string(ar_burst) << " RD success !" << std::endl;
-            std::cout << "ADDR:0x" << std::hex << ar_addr 
-                      << "  LEN:" << std::dec << ar_len 
-                      << "  SIZE:" << r_data_accum.size() << "  DATA:" << std::endl;
-            print_data(r_data_accum);
-            std::cout << std::endl;
-            return;
-        }
-
         if (r_active) {
             size_t bytes_per_beat = DATA_WIDTH/8;
+
+            if (*(port.rvalid) && rready_i) {
+                std::vector<uint8_t> beat_data;
+                signal_get(port.rdata, beat_data, bytes_per_beat);
+                r_data_accum.insert(r_data_accum.end(), beat_data.begin(), beat_data.end());
+
+                r_beat_count++;
+            }
+
+            if (r_beat_count > ar_len) {
+                // Done
+                r_active = false;
+                *(port.rvalid) = false;
+                *(port.rlast) = false;
+                ar_latch = false;
+
+                log.info("[AXI-SLV] ", burst_to_string(ar_burst), " RD success !");
+                log.info("ADDR:0x", std::hex, ar_addr,
+                   "  LEN:", std::dec, ar_len,
+                   "  SIZE:", r_data_accum.size(),
+                   "  ID:0x", std::hex, ar_id);
+                log.hexdump(r_data_accum, ar_addr);
+                return;
+            }
+
             uint64_t current_addr = get_addr(ar_addr, r_beat_count, ar_len, ar_burst, bytes_per_beat);
-            
+
             std::vector<uint8_t> beat_data;
             beat_data.reserve(bytes_per_beat);
-            
+
             for (size_t i=0; i<bytes_per_beat; i++) {
                 if (mem.find(current_addr + i) != mem.end()) {
                     beat_data.push_back(mem[current_addr + i]);
@@ -341,30 +350,16 @@ public:
                     beat_data.push_back(0);
                 }
             }
-            
+
             signal_set(port.rdata, beat_data, 0, bytes_per_beat);
-            
+
             *(port.rvalid) = true;
             *(port.rresp) = 0; // OKAY
             *(port.rid) = ar_id;
-            
+
             bool last = (r_beat_count == ar_len);
             *(port.rlast) = last;
-
-            if (rready_i) {
-                r_data_accum.insert(r_data_accum.end(), beat_data.begin(), beat_data.end());
-                r_beat_count++;
-                if (last) {
-                    r_done_pending = true;
-                    return;
-                }
-            }
         }
-    }
-
-    void tick() {
-        update_input();
-        update_output();
     }
 };
 

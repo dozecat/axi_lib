@@ -1,10 +1,10 @@
 /******************************************************************************
- * Copyright (C) 2025 WanderingKitsune. All rights reserved.
+ * Copyright (C) 2025 dozecat. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * @file        axil_master.hpp
  * @brief       AXI4-Lite Master VIP
- * @see         https://github.com/WanderingKitsune/axi_lib.git
+ * @see         https://github.com/dozecat/vaxivip
  *
  * @details     This module implements the Master VIP for AXI4-Lite protocol verification.
  *
@@ -17,11 +17,9 @@
 #ifndef AXIL_MASTER_HPP
 #define AXIL_MASTER_HPP
 
-#include "axil.hpp"
-#include <cstdint>
+#include "axil_ptr.hpp"
+#include "log.hpp"
 #include <queue>
-#include <iostream>
-#include <iomanip>
 
 /// @brief AXI4-Lite Master BFM
 template <
@@ -30,6 +28,7 @@ template <
 >
 class axil_master {
 public:
+    Log log;
     axil_master_ptr<DATA_WIDTH, ADDR_WIDTH> port;              ///< Interface signal pointers
 
     std::queue<uint64_t> wr_data_q;         ///< Write data queue
@@ -192,12 +191,11 @@ public:
         // Write Response
         if (*(port.bready) && bvalid_i && !b_hs) {
             if (bresp_i != OKAY) {
-                std::cout << "[AXIL-MST][WARN] Write response not OKAY!" << std::endl;
+                log.warning("[AXIL-MST] Write response not OKAY!");
             }
             b_hs = true;
-            std::cout << "[AXIL-MST] WR success !" << std::endl;
-            std::cout << "ADDR:0x" << std::hex << current_wr_addr 
-                      << "  DATA:0x" << current_wr_data << std::endl << std::endl;
+            log.info("[AXIL-MST] WR success !");
+            log.info("ADDR:0x", std::hex, current_wr_addr, "  DATA:0x", current_wr_data);
         }
 
         // Read Address
@@ -210,12 +208,11 @@ public:
             uint64_t data = rdata_i;
             rd_data_q.push(data);
             if (rresp_i != OKAY) {
-                std::cout << "[AXIL-MST][WARN] Read response not OKAY!" << std::endl;
+                log.warning("[AXIL-MST] Read response not OKAY!");
             }
             r_hs = true;
-            std::cout << "[AXIL-MST] RD success !" << std::endl;
-            std::cout << "ADDR:0x" << std::hex << current_rd_addr 
-                      << "  DATA:0x" << data << std::endl << std::endl;
+            log.info("[AXIL-MST] RD success !");
+            log.info("ADDR:0x", std::hex, current_rd_addr, "  DATA:0x", data);
         }
 
         // 3. Drive New Requests (if not busy and not in handshake process)
@@ -223,8 +220,10 @@ public:
             wr_active = true;
             uint64_t addr = wr_addr_q.front(); wr_addr_q.pop();
             uint64_t data = wr_data_q.front(); wr_data_q.pop();
+
             current_wr_addr = addr;
             current_wr_data = data;
+
             waddr_set(addr);
             wdata_set(data);
         }
@@ -232,7 +231,9 @@ public:
         if (!rd_active && !rd_addr_q.empty()) {
             rd_active = true;
             uint64_t addr = rd_addr_q.front(); rd_addr_q.pop();
+
             current_rd_addr = addr;
+
             raddr_set(addr);
         }
     }

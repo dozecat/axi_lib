@@ -1,10 +1,10 @@
 /******************************************************************************
- * Copyright (C) 2025 WanderingKitsune. All rights reserved.
+ * Copyright (C) 2025 dozecat. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
- * @file        axil_vip.hpp
+ * @file        axil.hpp
  * @brief       AXI4-Lite VIP (Verification IP)
- * @see         https://github.com/WanderingKitsune/axi_lib.git
+ * @see         https://github.com/dozecat/vaxivip
  *
  * @details     This module implements the VIP for AXI4-Lite protocol verification.
  *
@@ -14,8 +14,8 @@
  * 1.0        2025/12/30  Initial release (Separated from axil.hpp)
  ******************************************************************************/
 
-#ifndef AXIL_VIP_HPP
-#define AXIL_VIP_HPP
+#ifndef AXIL_HPP
+#define AXIL_HPP
 
 #include "axil_master.hpp"
 #include "axil_slave.hpp"
