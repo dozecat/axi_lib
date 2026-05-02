@@ -28,13 +28,15 @@
 
 #define DATA_WIDTH 64
 #define ADDR_WIDTH 32
-#define ID_WIDTH 8
+#define SLV_ID_WIDTH 8
+
+constexpr int clog2(int n) { return (n <= 1) ? 0 : 1 + clog2((n + 1) / 2); }
+static constexpr int MST_NUM = 4;
+static constexpr int MST_ID_WIDTH = SLV_ID_WIDTH + clog2(MST_NUM);
 #define N 4
 
-static const uint32_t kMstId[N] = {0x80, 0x40, 0x20, 0x10};
-
 template <typename T>
-static void connect_slv(axi_ptr<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH>& p, T* top, int idx) {
+static void connect_slv(axi_ptr<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH>& p, T* top, int idx) {
     p.awaddr   = &(top->slv_awaddr[idx]);
     p.awid     = &(top->slv_awid[idx]);
     p.awlen    = &(top->slv_awlen[idx]);
@@ -78,7 +80,7 @@ static void connect_slv(axi_ptr<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH>& p, T* top, in
 }
 
 template <typename T>
-static void connect_mst(axi_ptr<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH>& p, T* top, int idx) {
+static void connect_mst(axi_ptr<DATA_WIDTH, ADDR_WIDTH, MST_ID_WIDTH>& p, T* top, int idx) {
     p.awaddr   = &(top->mst_awaddr[idx]);
     p.awid     = &(top->mst_awid[idx]);
     p.awlen    = &(top->mst_awlen[idx]);
@@ -154,7 +156,8 @@ static int slv_ix(uint64_t p) {
     return 3;
 }
 
-static void mem_eq(axi_slave<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH> (&slv)[N], uint64_t addr,
+template <size_t IDW>
+static void mem_eq(axi_slave<DATA_WIDTH, ADDR_WIDTH, IDW> (&slv)[N], uint64_t addr,
     const std::vector<uint8_t>& exp, int& pass, int& fail) {
     bool ok = true;
     for (size_t i = 0; i < exp.size(); i++) {
@@ -177,8 +180,8 @@ int main(int argc, char** argv) {
     Vaxi_interconnect_tb* top = new Vaxi_interconnect_tb;
     VerilatedVcdC* tfp = new VerilatedVcdC;
 
-    axi_ptr<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH> slv_p[N];
-    axi_ptr<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH> mst_p[N];
+    axi_ptr<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH> slv_p[N];
+    axi_ptr<DATA_WIDTH, ADDR_WIDTH, MST_ID_WIDTH> mst_p[N];
     for (int i = 0; i < N; i++) {
         connect_slv(slv_p[i], top, i);
         connect_mst(mst_p[i], top, i);
@@ -186,17 +189,17 @@ int main(int argc, char** argv) {
             return 1;
     }
 
-    axi_master<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH> mst_bfm[] = {
-        axi_master<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH>(slv_p[0]),
-        axi_master<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH>(slv_p[1]),
-        axi_master<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH>(slv_p[2]),
-        axi_master<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH>(slv_p[3]),
+    axi_master<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH> mst_bfm[] = {
+        axi_master<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH>(slv_p[0]),
+        axi_master<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH>(slv_p[1]),
+        axi_master<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH>(slv_p[2]),
+        axi_master<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH>(slv_p[3]),
     };
-    axi_slave<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH> slv_bfm[] = {
-        axi_slave<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH>(mst_p[0]),
-        axi_slave<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH>(mst_p[1]),
-        axi_slave<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH>(mst_p[2]),
-        axi_slave<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH>(mst_p[3]),
+    axi_slave<DATA_WIDTH, ADDR_WIDTH, MST_ID_WIDTH> slv_bfm[] = {
+        axi_slave<DATA_WIDTH, ADDR_WIDTH, MST_ID_WIDTH>(mst_p[0]),
+        axi_slave<DATA_WIDTH, ADDR_WIDTH, MST_ID_WIDTH>(mst_p[1]),
+        axi_slave<DATA_WIDTH, ADDR_WIDTH, MST_ID_WIDTH>(mst_p[2]),
+        axi_slave<DATA_WIDTH, ADDR_WIDTH, MST_ID_WIDTH>(mst_p[3]),
     };
 
     top->trace(tfp, 99);
@@ -253,25 +256,25 @@ int main(int argc, char** argv) {
             if (cycle == 10) {
                 for (int i = 0; i < N; i++) {
                     uint64_t base = 0x1000ull * (unsigned)i;
-                    mst_bfm[i].write_incr(base + 0x10, u64_le(0xA5A50000u + (unsigned)i), kMstId[i]);
+                    mst_bfm[i].write_incr(base + 0x10, u64_le(0xA5A50000u + (unsigned)i));
                 }
             }
             if (cycle == 280) {
                 for (int i = 0; i < N; i++) {
                     uint64_t base = 0x1000ull * (unsigned)i;
-                    mst_bfm[i].read_incr(base + 0x10, DATA_WIDTH / 8, kMstId[i]);
+                    mst_bfm[i].read_incr(base + 0x10, DATA_WIDTH / 8);
                     push_exp(i, u64_le(0xA5A50000u + (unsigned)i));
                 }
             }
 
             if (cycle == 600) {
-                mst_bfm[0].write_incr(0x40, bytes_inc(32, 0x10), kMstId[0]);
+                mst_bfm[0].write_incr(0x40, bytes_inc(32, 0x10));
             }
             if (cycle == 5000) {
                 mem_eq(slv_bfm, 0x40, bytes_inc(32, 0x10), pass, fail);
             }
             if (cycle == 5100) {
-                mst_bfm[0].read_incr(0x40, 32, kMstId[0]);
+                mst_bfm[0].read_incr(0x40, 32);
                 push_exp(0, bytes_inc(32, 0x10));
             }
 
@@ -282,7 +285,7 @@ int main(int argc, char** argv) {
                     for (int j = 0; j < 8; j++)
                         wf[b * 8 + j] = x;
                 }
-                mst_bfm[1].write_fixed(0x1180, wf, kMstId[1]);
+                mst_bfm[1].write_fixed(0x1180, wf);
             }
             if (cycle == 9800) {
                 std::vector<uint8_t> eb(8, (uint8_t)0xC0);
@@ -293,47 +296,47 @@ int main(int argc, char** argv) {
                 for (int t = 0; t < 3; t++)
                     for (int j = 0; j < 8; j++)
                         ex24[t * 8 + j] = (uint8_t)0xC0;
-                mst_bfm[1].read_fixed(0x1180, 24, kMstId[1]);
+                mst_bfm[1].read_fixed(0x1180, 24);
                 push_exp(1, std::move(ex24));
             }
 
             if (cycle == 10200) {
-                mst_bfm[2].write_wrap(0x21c0, bytes_inc(32, 0x01), kMstId[2]);
+                mst_bfm[2].write_wrap(0x21c0, bytes_inc(32, 0x01));
             }
             if (cycle == 14600) {
                 mem_eq(slv_bfm, 0x21c0, bytes_inc(32, 0x01), pass, fail);
             }
             if (cycle == 14700) {
-                mst_bfm[2].read_wrap(0x21c0, 32, kMstId[2]);
+                mst_bfm[2].read_wrap(0x21c0, 32);
                 push_exp(2, bytes_inc(32, 0x01));
             }
 
             if (cycle == 15000) {
-                mst_bfm[3].write_incr(0x3040, bytes_inc(16, 0x70), kMstId[3]);
+                mst_bfm[3].write_incr(0x3040, bytes_inc(16, 0x70));
             }
             if (cycle == 19400) {
                 mem_eq(slv_bfm, 0x3040, bytes_inc(16, 0x70), pass, fail);
             }
             if (cycle == 19500) {
-                mst_bfm[3].read_incr(0x3040, 16, kMstId[3]);
+                mst_bfm[3].read_incr(0x3040, 16);
                 push_exp(3, bytes_inc(16, 0x70));
             }
 
             if (cycle == 19800) {
-                mst_bfm[0].write_incr(0x2050, bytes_inc(64, 0x5A), kMstId[0]);
+                mst_bfm[0].write_incr(0x2050, bytes_inc(64, 0x5A));
             }
             if (cycle == 24200) {
                 mem_eq(slv_bfm, 0x2050, bytes_inc(64, 0x5A), pass, fail);
             }
             if (cycle == 24300) {
-                mst_bfm[0].read_incr(0x2050, 64, kMstId[0]);
+                mst_bfm[0].read_incr(0x2050, 64);
                 push_exp(0, bytes_inc(64, 0x5A));
             }
 
             if (cycle == 24600) {
                 for (int i = 0; i < N; i++) {
                     uint64_t base = 0x1000ull * (unsigned)i;
-                    mst_bfm[i].write_fixed(base + 0x100, bytes_inc(8, (uint8_t)(0x51 + i)), kMstId[i]);
+                    mst_bfm[i].write_fixed(base + 0x100, bytes_inc(8, (uint8_t)(0x51 + i)));
                 }
             }
             if (cycle == 29000) {
@@ -345,7 +348,7 @@ int main(int argc, char** argv) {
             if (cycle == 29100) {
                 for (int i = 0; i < N; i++) {
                     uint64_t base = 0x1000ull * (unsigned)i;
-                    mst_bfm[i].read_fixed(base + 0x100, 8, kMstId[i]);
+                    mst_bfm[i].read_fixed(base + 0x100, 8);
                     push_exp(i, bytes_inc(8, (uint8_t)(0x51 + i)));
                 }
             }

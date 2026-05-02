@@ -20,18 +20,18 @@ module axi_interconnect
    parameter SLV_NUM             = 4,
    parameter ADDR_WIDTH          = 32,
    parameter DATA_WIDTH          = 64,
-   parameter ID_WIDTH            = 8,
+   parameter SLV_ID_WIDTH        = 8,
+   parameter MST_ID_WIDTH        = SLV_ID_WIDTH + $clog2(MST_NUM),
    parameter PRIORITY_WIDTH      = 4,
-   parameter TRK_DEPTH           = 4,
    parameter MST_BUF_EN          = {MST_NUM{1'b0}},
    parameter MST_BUF_DEPTH       = {MST_NUM{16'b0}},
    parameter MST_PRIORITY        = {MST_NUM*PRIORITY_WIDTH{1'b0}},
-   parameter MST_ID_MASK         = {MST_NUM*ID_WIDTH{1'b0}},
    parameter SLV_BUF_EN          = {SLV_NUM{1'b0}},
    parameter SLV_BUF_DEPTH       = {SLV_NUM{16'b0}},
    parameter SLV_START_ADDR      = {SLV_NUM*ADDR_WIDTH{1'b0}},
    parameter SLV_END_ADDR        = {SLV_NUM*ADDR_WIDTH{1'b1}},
-   parameter SLV_KEEP_BASE       = {SLV_NUM{1'b0}}
+   parameter SLV_KEEP_BASE       = {SLV_NUM{1'b0}},
+   parameter RAM_STYLE           = "distributed"
 )(
    input  wire                   aclk,
    input  wire                   aresetn,
@@ -40,50 +40,38 @@ module axi_interconnect
    if_axi.master                 axi_mst_if [0:SLV_NUM-1]
 );
 
-localparam STRB_WIDTH   = DATA_WIDTH / 8;
-localparam LEN_WIDTH    = 8;
-localparam RESP_WIDTH   = 2;
+localparam STRB_WIDTH    = DATA_WIDTH / 8;
+localparam LEN_WIDTH     = 8;
+localparam RESP_WIDTH    = 2;
+localparam EXTRA_ID_BITS = MST_ID_WIDTH - SLV_ID_WIDTH;
 
-localparam AWCH_WIDTH = ADDR_WIDTH + ID_WIDTH + 29;
-localparam WCH_WIDTH  = DATA_WIDTH + STRB_WIDTH + 1 + ID_WIDTH;
-localparam BCH_WIDTH  = RESP_WIDTH + ID_WIDTH;
-localparam RCH_WIDTH  = DATA_WIDTH + RESP_WIDTH + ID_WIDTH + 1;
+localparam I_AWCH_WIDTH = ADDR_WIDTH + SLV_ID_WIDTH + 29;
+localparam I_WCH_WIDTH  = DATA_WIDTH + STRB_WIDTH + 1 + SLV_ID_WIDTH;
+localparam I_ARCH_WIDTH = I_AWCH_WIDTH;
+
+localparam AWCH_WIDTH = ADDR_WIDTH + MST_ID_WIDTH + 29;
+localparam WCH_WIDTH  = DATA_WIDTH + STRB_WIDTH + 1 + MST_ID_WIDTH;
+localparam BCH_WIDTH  = RESP_WIDTH + MST_ID_WIDTH;
+localparam RCH_WIDTH  = DATA_WIDTH + RESP_WIDTH + MST_ID_WIDTH + 1;
 localparam ARCH_WIDTH = AWCH_WIDTH;
-
-localparam AW_ADDR_LSB = 0;
-localparam AW_ID_LSB   = ADDR_WIDTH;
-
-localparam W_LAST_LSB  = ID_WIDTH;
-
-localparam B_ID_LSB    = 0;
-localparam B_RESP_LSB  = ID_WIDTH;
-
-localparam R_LAST_LSB  = 0;
-localparam R_ID_LSB    = 1;
-localparam R_RESP_LSB  = 1 + ID_WIDTH;
-localparam R_DATA_LSB  = 1 + ID_WIDTH + RESP_WIDTH;
-
-localparam INTF_ADDR_WIDTH = axi_slv_if[0].ADDR_WIDTH;
-localparam INTF_DATA_WIDTH = axi_slv_if[0].DATA_WIDTH;
-localparam INTF_ID_WIDTH   = axi_slv_if[0].ID_WIDTH;
 
 // Flat signal declarations
 genvar i, j;
-logic [MST_NUM            -1:0]   i_awvalid;
-logic [MST_NUM            -1:0]   i_awready;
-logic [MST_NUM*AWCH_WIDTH -1:0]   i_awch;
-logic [MST_NUM            -1:0]   i_wvalid;
-logic [MST_NUM            -1:0]   i_wready;
-logic [MST_NUM*WCH_WIDTH  -1:0]   i_wch;
-logic [MST_NUM            -1:0]   i_bvalid;
-logic [MST_NUM            -1:0]   i_bready;
-logic [MST_NUM*BCH_WIDTH  -1:0]   i_bch;
-logic [MST_NUM            -1:0]   i_arvalid;
-logic [MST_NUM            -1:0]   i_arready;
-logic [MST_NUM*ARCH_WIDTH -1:0]   i_arch;
-logic [MST_NUM            -1:0]   i_rvalid;
-logic [MST_NUM            -1:0]   i_rready;
-logic [MST_NUM*RCH_WIDTH  -1:0]   i_rch;
+logic [MST_NUM               -1:0]   i_awvalid;
+logic [MST_NUM               -1:0]   i_awready;
+logic [MST_NUM*I_AWCH_WIDTH  -1:0]   i_awch;
+logic [MST_NUM               -1:0]   i_wvalid;
+logic [MST_NUM               -1:0]   i_wready;
+logic [MST_NUM*I_WCH_WIDTH   -1:0]   i_wch;
+logic [MST_NUM               -1:0]   i_bvalid;
+logic [MST_NUM               -1:0]   i_bready;
+logic [MST_NUM*BCH_WIDTH     -1:0]   i_bch;
+logic [MST_NUM               -1:0]   i_arvalid;
+logic [MST_NUM               -1:0]   i_arready;
+logic [MST_NUM*I_ARCH_WIDTH  -1:0]   i_arch;
+logic [MST_NUM               -1:0]   i_rvalid;
+logic [MST_NUM               -1:0]   i_rready;
+logic [MST_NUM*RCH_WIDTH     -1:0]   i_rch;
 
 logic [SLV_NUM            -1:0]   o_awvalid;
 logic [SLV_NUM            -1:0]   o_awready;
@@ -132,18 +120,34 @@ logic [MST_NUM             -1:0]  ar_misrouting;
 
 
 initial begin
-   if (ADDR_WIDTH != INTF_ADDR_WIDTH)
-      $error("ADDR_WIDTH mismatch: %0d != %0d", ADDR_WIDTH, INTF_ADDR_WIDTH);
+   for (integer m = 0; m < MST_NUM; m++) begin
+      if (axi_slv_if[m].ADDR_WIDTH != ADDR_WIDTH)
+         $error("axi_slv_if[%0d].ADDR_WIDTH (%0d) != ADDR_WIDTH (%0d)", m, axi_slv_if[m].ADDR_WIDTH, ADDR_WIDTH);
+      if (axi_slv_if[m].DATA_WIDTH != DATA_WIDTH)
+         $error("axi_slv_if[%0d].DATA_WIDTH (%0d) != DATA_WIDTH (%0d)", m, axi_slv_if[m].DATA_WIDTH, DATA_WIDTH);
+   end
 end
 
 initial begin
-   if (DATA_WIDTH != INTF_DATA_WIDTH)
-      $error("DATA_WIDTH mismatch: %0d != %0d", DATA_WIDTH, INTF_DATA_WIDTH);
+   for (integer m = 0; m < MST_NUM; m++) begin
+      if (axi_slv_if[m].ID_WIDTH != SLV_ID_WIDTH)
+         $error("axi_slv_if[%0d].ID_WIDTH (%0d) != SLV_ID_WIDTH (%0d)", m, axi_slv_if[m].ID_WIDTH, SLV_ID_WIDTH);
+   end
 end
 
 initial begin
-   if (ID_WIDTH != INTF_ID_WIDTH)
-      $error("ID_WIDTH mismatch: %0d != %0d", ID_WIDTH, INTF_ID_WIDTH);
+   for (integer n = 0; n < SLV_NUM; n++) begin
+      if (axi_mst_if[n].ID_WIDTH < MST_ID_WIDTH)
+         $error("axi_mst_if[%0d].ID_WIDTH (%0d) < MST_ID_WIDTH (%0d)", n, axi_mst_if[n].ID_WIDTH, MST_ID_WIDTH);
+   end
+end
+
+initial begin
+   if (MST_ID_WIDTH < SLV_ID_WIDTH + $clog2(MST_NUM)) begin
+      $error("MST_ID_WIDTH (%0d) must be >= SLV_ID_WIDTH (%0d) + $clog2(MST_NUM) (%0d)",
+             MST_ID_WIDTH, SLV_ID_WIDTH, $clog2(MST_NUM));
+      $finish;
+   end
 end
 
 initial begin
@@ -171,17 +175,18 @@ end
 // Slave Interface
 generate
    for (i = 0; i < MST_NUM; i++) begin : slv_if
-      logic [AWCH_WIDTH -1:0] awch;
-      logic [WCH_WIDTH  -1:0] wch;
-      logic [BCH_WIDTH  -1:0] bch;
-      logic [ARCH_WIDTH -1:0] arch;
-      logic [RCH_WIDTH  -1:0] rch;
+      logic [I_AWCH_WIDTH -1:0] awch;
+      logic [I_WCH_WIDTH  -1:0] wch;
+      logic [BCH_WIDTH    -1:0] bch;
+      logic [I_ARCH_WIDTH -1:0] arch;
+      logic [RCH_WIDTH    -1:0] rch;
 
       assign awch = {axi_slv_if[i].awregion, axi_slv_if[i].awqos, axi_slv_if[i].awprot,
                      axi_slv_if[i].awcache,  axi_slv_if[i].awlock, axi_slv_if[i].awburst,
                      axi_slv_if[i].awsize,   axi_slv_if[i].awlen,
                      axi_slv_if[i].awid,     axi_slv_if[i].awaddr};
-      assign wch  = {axi_slv_if[i].wdata, axi_slv_if[i].wstrb, axi_slv_if[i].wlast, axi_slv_if[i].wid};
+      assign wch  = {axi_slv_if[i].wdata, axi_slv_if[i].wstrb, axi_slv_if[i].wlast,
+                     axi_slv_if[i].wid};
       assign arch = {axi_slv_if[i].arregion, axi_slv_if[i].arqos, axi_slv_if[i].arprot,
                      axi_slv_if[i].arcache,  axi_slv_if[i].arlock, axi_slv_if[i].arburst,
                      axi_slv_if[i].arsize,   axi_slv_if[i].arlen,
@@ -193,9 +198,10 @@ generate
          wire ar_full, ar_empty, r_full, r_empty;
 
          sync_fifo #(
-            .WIDTH               ( AWCH_WIDTH ),
+            .WIDTH               ( I_AWCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "true" )
+            .FWFT                ( "true" ),
+            .RAM_STYLE           ( RAM_STYLE )
          ) u_aw (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -203,21 +209,21 @@ generate
             .wr_data             ( awch ),
             .full                ( aw_full ),
             .rd_en               ( i_awready[i] ),
-            .rd_data             ( i_awch[i*AWCH_WIDTH+:AWCH_WIDTH] ),
+            .rd_data             ( i_awch[i*I_AWCH_WIDTH+:I_AWCH_WIDTH] ),
             .empty               ( aw_empty ),
             .overflow            ( ),
             .underflow           ( ),
             .level               ( )
          );
+
          assign axi_slv_if[i].awready = !aw_full;
          assign i_awvalid[i] = !aw_empty;
-         wire [ADDR_WIDTH-1:0] awaddr_dbg;
-         assign awaddr_dbg = i_awch[i*AWCH_WIDTH+:ADDR_WIDTH];
 
          sync_fifo #(
-            .WIDTH               ( WCH_WIDTH ),
+            .WIDTH               ( I_WCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "true" )
+            .FWFT                ( "true" ),
+            .RAM_STYLE           ( RAM_STYLE )
          ) u_w (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -225,19 +231,21 @@ generate
             .wr_data             ( wch ),
             .full                ( w_full ),
             .rd_en               ( i_wready[i] ),
-            .rd_data             ( i_wch[i*WCH_WIDTH+:WCH_WIDTH] ),
+            .rd_data             ( i_wch[i*I_WCH_WIDTH+:I_WCH_WIDTH] ),
             .empty               ( w_empty ),
             .overflow            ( ),
             .underflow           ( ),
             .level               ( )
          );
+
          assign axi_slv_if[i].wready = !w_full;
          assign i_wvalid[i] = !w_empty;
 
          sync_fifo #(
             .WIDTH               ( BCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "true" )
+            .FWFT                ( "true" ),
+            .RAM_STYLE           ( RAM_STYLE )
          ) u_b (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -251,13 +259,15 @@ generate
             .underflow           ( ),
             .level               ( )
          );
+
          assign i_bready[i] = !b_full;
          assign axi_slv_if[i].bvalid = !b_empty;
 
          sync_fifo #(
-            .WIDTH               ( ARCH_WIDTH ),
+            .WIDTH               ( I_ARCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "true" )
+            .FWFT                ( "true" ),
+            .RAM_STYLE           ( RAM_STYLE )
          ) u_ar (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -265,7 +275,7 @@ generate
             .wr_data             ( arch ),
             .full                ( ar_full ),
             .rd_en               ( i_arready[i] ),
-            .rd_data             ( i_arch[i*ARCH_WIDTH+:ARCH_WIDTH] ),
+            .rd_data             ( i_arch[i*I_ARCH_WIDTH+:I_ARCH_WIDTH] ),
             .empty               ( ar_empty ),
             .overflow            ( ),
             .underflow           ( ),
@@ -273,13 +283,12 @@ generate
          );
          assign axi_slv_if[i].arready = !ar_full;
          assign i_arvalid[i] = !ar_empty;
-         wire [ADDR_WIDTH-1:0] araddr_dbg;
-         assign araddr_dbg = i_arch[i*ARCH_WIDTH+:ADDR_WIDTH];
 
          sync_fifo #(
             .WIDTH               ( RCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "true" )
+            .FWFT                ( "true" ),
+            .RAM_STYLE           ( RAM_STYLE )
          ) u_r (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -296,25 +305,33 @@ generate
          assign i_rready[i] = !r_full;
          assign axi_slv_if[i].rvalid = !r_empty;
 
-         assign {axi_slv_if[i].bresp, axi_slv_if[i].bid} = bch;
-         assign {axi_slv_if[i].rdata, axi_slv_if[i].rresp, axi_slv_if[i].rid, axi_slv_if[i].rlast} = rch;
+         assign axi_slv_if[i].bid   = bch[0+:SLV_ID_WIDTH];
+         assign axi_slv_if[i].bresp = bch[MST_ID_WIDTH+:RESP_WIDTH];
+         assign axi_slv_if[i].rlast = rch[0];
+         assign axi_slv_if[i].rid   = rch[1+:SLV_ID_WIDTH];
+         assign axi_slv_if[i].rresp = rch[1+MST_ID_WIDTH+:RESP_WIDTH];
+         assign axi_slv_if[i].rdata = rch[1+MST_ID_WIDTH+RESP_WIDTH+:DATA_WIDTH];
 
       end else begin : buffer_off
          assign i_awvalid[i] = axi_slv_if[i].awvalid;
          assign axi_slv_if[i].awready = i_awready[i];
-         assign i_awch[i*AWCH_WIDTH+:AWCH_WIDTH] = awch;
+         assign i_awch[i*I_AWCH_WIDTH+:I_AWCH_WIDTH] = awch;
          assign i_wvalid[i] = axi_slv_if[i].wvalid;
          assign axi_slv_if[i].wready = i_wready[i];
-         assign i_wch[i*WCH_WIDTH+:WCH_WIDTH] = wch;
+         assign i_wch[i*I_WCH_WIDTH+:I_WCH_WIDTH] = wch;
          assign axi_slv_if[i].bvalid = i_bvalid[i];
          assign i_bready[i] = axi_slv_if[i].bready;
-         assign {axi_slv_if[i].bresp, axi_slv_if[i].bid} = i_bch[i*BCH_WIDTH+:BCH_WIDTH];
+         assign axi_slv_if[i].bid   = i_bch[i*BCH_WIDTH+0+:SLV_ID_WIDTH];
+         assign axi_slv_if[i].bresp = i_bch[i*BCH_WIDTH+MST_ID_WIDTH+:RESP_WIDTH];
          assign i_arvalid[i] = axi_slv_if[i].arvalid;
          assign axi_slv_if[i].arready = i_arready[i];
-         assign i_arch[i*ARCH_WIDTH+:ARCH_WIDTH] = arch;
+         assign i_arch[i*I_ARCH_WIDTH+:I_ARCH_WIDTH] = arch;
          assign axi_slv_if[i].rvalid = i_rvalid[i];
          assign i_rready[i] = axi_slv_if[i].rready;
-         assign {axi_slv_if[i].rdata, axi_slv_if[i].rresp, axi_slv_if[i].rid, axi_slv_if[i].rlast} = i_rch[i*RCH_WIDTH+:RCH_WIDTH];
+         assign axi_slv_if[i].rlast = i_rch[i*RCH_WIDTH+0];
+         assign axi_slv_if[i].rid   = i_rch[i*RCH_WIDTH+1+:SLV_ID_WIDTH];
+         assign axi_slv_if[i].rresp = i_rch[i*RCH_WIDTH+1+MST_ID_WIDTH+:RESP_WIDTH];
+         assign axi_slv_if[i].rdata = i_rch[i*RCH_WIDTH+1+MST_ID_WIDTH+RESP_WIDTH+:DATA_WIDTH];
       end
    end
 endgenerate
@@ -329,16 +346,16 @@ generate
       logic               w_hs_started;
       logic               b_trk_valid;
       logic [SLV_NUM-1:0] b_trk_target;
-      logic [ID_WIDTH-1:0] b_trk_id;
+      logic [SLV_ID_WIDTH-1:0] b_trk_id;
       logic               b_clear_pending;
 
-      wire [ID_WIDTH-1:0]  awid_cur  = i_awch[i*AWCH_WIDTH+AW_ID_LSB+:ID_WIDTH];
-      wire                 wlast_cur = i_wch[i*WCH_WIDTH+W_LAST_LSB];
+      wire [SLV_ID_WIDTH-1:0]  awid_cur  = i_awch[i*I_AWCH_WIDTH+ADDR_WIDTH+:SLV_ID_WIDTH];
+      wire                 wlast_cur = i_wch[i*I_WCH_WIDTH+SLV_ID_WIDTH];
 
       for (j = 0; j < SLV_NUM; j++) begin : decode
          assign slv_aw_targeted[j] =
-            (i_awch[i*AWCH_WIDTH+:ADDR_WIDTH] >= SLV_START_ADDR[j*ADDR_WIDTH+:ADDR_WIDTH]) &&
-            (i_awch[i*AWCH_WIDTH+:ADDR_WIDTH] <= SLV_END_ADDR[j*ADDR_WIDTH+:ADDR_WIDTH]);
+            (i_awch[i*I_AWCH_WIDTH+:ADDR_WIDTH] >= SLV_START_ADDR[j*ADDR_WIDTH+:ADDR_WIDTH]) &&
+            (i_awch[i*I_AWCH_WIDTH+:ADDR_WIDTH] <= SLV_END_ADDR[j*ADDR_WIDTH+:ADDR_WIDTH]);
       end
 
       // AW forward: gated by W tracking not active
@@ -399,7 +416,7 @@ generate
       // Write misrouting
       logic                misr_wr_active;
       logic [LEN_WIDTH-1:0] misr_wr_cnt;
-      logic [ID_WIDTH-1:0] misr_wr_id;
+      logic [SLV_ID_WIDTH-1:0] misr_wr_id;
       logic                misr_b_pending;
 
       // AW misrouting one-shot pulse: fires for 1 cycle on unmapped AW
@@ -423,7 +440,7 @@ generate
             if (aw_misrouting[i] && i_awvalid[i] && i_awready[i]) begin
                misr_wr_active <= 1'b1;
                misr_wr_id <= awid_cur;
-               misr_wr_cnt <= i_awch[i*AWCH_WIDTH+AW_ID_LSB+ID_WIDTH+:LEN_WIDTH];
+               misr_wr_cnt <= i_awch[i*I_AWCH_WIDTH+ADDR_WIDTH+SLV_ID_WIDTH+:LEN_WIDTH];
             end else if (misr_wr_active && i_wvalid[i] && i_wready[i]) begin
                if (wlast_cur || misr_wr_cnt == 0) begin
                   misr_wr_active <= 1'b0;
@@ -470,8 +487,8 @@ generate
          i_bch[i*BCH_WIDTH+:BCH_WIDTH] = '0;
          if (misr_b_pending) begin
             i_bvalid[i] = 1'b1;
-            i_bch[i*BCH_WIDTH+B_RESP_LSB+:RESP_WIDTH] = 2'b11;
-            i_bch[i*BCH_WIDTH+B_ID_LSB+:ID_WIDTH] = misr_wr_id;
+            i_bch[i*BCH_WIDTH+MST_ID_WIDTH+:RESP_WIDTH] = 2'b11;
+            i_bch[i*BCH_WIDTH+0+:SLV_ID_WIDTH] = misr_wr_id;
          end else if (b_trk_valid) begin
             for (int k = 0; k < SLV_NUM; k++) begin
                if (b_trk_target[k]) begin
@@ -507,13 +524,13 @@ generate
       logic               r_trk_valid;
       logic               r_burst_active;
 
-      wire [ID_WIDTH-1:0]  arid_cur  = i_arch[i*ARCH_WIDTH+AW_ID_LSB+:ID_WIDTH];
-      wire                 rlast_cur = i_rch[i*RCH_WIDTH+R_LAST_LSB];
+      wire [SLV_ID_WIDTH-1:0]  arid_cur  = i_arch[i*I_ARCH_WIDTH+ADDR_WIDTH+:SLV_ID_WIDTH];
+      wire                 rlast_cur = i_rch[i*RCH_WIDTH+0];
 
       for (j = 0; j < SLV_NUM; j++) begin : decode
          assign slv_ar_targeted[j] =
-            (i_arch[i*ARCH_WIDTH+:ADDR_WIDTH] >= SLV_START_ADDR[j*ADDR_WIDTH+:ADDR_WIDTH]) &&
-            (i_arch[i*ARCH_WIDTH+:ADDR_WIDTH] <= SLV_END_ADDR[j*ADDR_WIDTH+:ADDR_WIDTH]);
+            (i_arch[i*I_ARCH_WIDTH+:ADDR_WIDTH] >= SLV_START_ADDR[j*ADDR_WIDTH+:ADDR_WIDTH]) &&
+            (i_arch[i*I_ARCH_WIDTH+:ADDR_WIDTH] <= SLV_END_ADDR[j*ADDR_WIDTH+:ADDR_WIDTH]);
       end
 
       for (j = 0; j < SLV_NUM; j++) begin : fwd_ar
@@ -539,7 +556,7 @@ generate
 
       logic misr_rd_active;
       logic [LEN_WIDTH-1:0] misr_rd_cnt;
-      logic [ID_WIDTH-1:0]  misr_rd_id;
+      logic [SLV_ID_WIDTH-1:0]  misr_rd_id;
 
       // AR misrouting one-shot pulse
       always_ff @(posedge aclk or negedge aresetn) begin
@@ -561,7 +578,7 @@ generate
             if (ar_misrouting[i] && i_arvalid[i] && i_arready[i]) begin
                misr_rd_active <= 1'b1;
                misr_rd_id <= arid_cur;
-               misr_rd_cnt <= i_arch[i*ARCH_WIDTH+AW_ID_LSB+ID_WIDTH+:LEN_WIDTH];
+               misr_rd_cnt <= i_arch[i*I_ARCH_WIDTH+ADDR_WIDTH+SLV_ID_WIDTH+:LEN_WIDTH];
             end else if (misr_rd_active && i_rvalid[i] && i_rready[i]) begin
                if (misr_rd_cnt == 0) begin
                   misr_rd_active <= 1'b0;
@@ -591,10 +608,10 @@ generate
          i_rch[i*RCH_WIDTH+:RCH_WIDTH] = '0;
          if (misr_rd_active) begin
             i_rvalid[i] = 1'b1;
-            i_rch[i*RCH_WIDTH+R_DATA_LSB+:DATA_WIDTH] = '0;
-            i_rch[i*RCH_WIDTH+R_RESP_LSB+:RESP_WIDTH] = 2'b11;
-            i_rch[i*RCH_WIDTH+R_ID_LSB+:ID_WIDTH] = misr_rd_id;
-            i_rch[i*RCH_WIDTH+R_LAST_LSB] = (misr_rd_cnt == 0);
+            i_rch[i*RCH_WIDTH+1+MST_ID_WIDTH+RESP_WIDTH+:DATA_WIDTH] = '0;
+            i_rch[i*RCH_WIDTH+1+MST_ID_WIDTH+:RESP_WIDTH] = 2'b11;
+            i_rch[i*RCH_WIDTH+1+:SLV_ID_WIDTH] = misr_rd_id;
+            i_rch[i*RCH_WIDTH+0] = (misr_rd_cnt == 0);
          end else if (r_burst_active) begin
             for (int k = 0; k < SLV_NUM; k++) begin
                if (r_trk_target[k]) begin
@@ -654,6 +671,7 @@ generate
       logic               aw_arb_en;
 
       wire [MST_NUM-1:0] aw_req_masked;
+      wire [$clog2(MST_NUM)-1:0] aw_grant_encoded;
       genvar awk;
       for (awk = 0; awk < MST_NUM; awk++) begin
          assign aw_req_masked[awk] = s2m_awvalid[j*MST_NUM+awk] &&
@@ -670,7 +688,7 @@ generate
          .en                  ( aw_arb_en ),
          .request             ( aw_req_masked ),
          .grant               ( aw_grant ),
-         .selsect             (  )
+         .selsect             ( aw_grant_encoded )
       );
 
       assign o_awvalid[j] = |aw_grant;
@@ -679,9 +697,14 @@ generate
          o_awch[j*AWCH_WIDTH+:AWCH_WIDTH] = '0;
          for (int k = 0; k < MST_NUM; k++) begin
             if (aw_grant[k]) begin
-               o_awch[j*AWCH_WIDTH+:AWCH_WIDTH] = i_awch[k*AWCH_WIDTH+:AWCH_WIDTH];
+               o_awch[j*AWCH_WIDTH+:AWCH_WIDTH] = {
+                   i_awch[k*I_AWCH_WIDTH+:I_AWCH_WIDTH][I_AWCH_WIDTH-1 : ADDR_WIDTH+SLV_ID_WIDTH],
+                   {EXTRA_ID_BITS{1'b0}},
+                   i_awch[k*I_AWCH_WIDTH+:I_AWCH_WIDTH][ADDR_WIDTH+SLV_ID_WIDTH-1:0]
+               };
             end
          end
+         o_awch[j*AWCH_WIDTH+ADDR_WIDTH+:MST_ID_WIDTH] |= ({{MST_ID_WIDTH-$clog2(MST_NUM){1'b0}}, aw_grant_encoded} << SLV_ID_WIDTH);
       end
 
       always_comb begin
@@ -692,7 +715,7 @@ generate
 
       assign aw_arb_en = (|aw_grant) ? o_awready[j] : |s2m_awvalid[j*MST_NUM+:MST_NUM];
 
-      wire wlast_from_grp = o_wch[j*WCH_WIDTH+W_LAST_LSB];
+      wire wlast_from_grp = o_wch[j*WCH_WIDTH+MST_ID_WIDTH];
 
       // o_wvalid = any master has W data for this slave
       // W data mux = pick the master with W valid (priority-encoded)
@@ -702,7 +725,12 @@ generate
          for (int k = 0; k < MST_NUM; k++) begin
             if (s2m_wvalid[j*MST_NUM+k]) begin
                o_wvalid[j] = 1'b1;
-               o_wch[j*WCH_WIDTH+:WCH_WIDTH] = i_wch[k*WCH_WIDTH+:WCH_WIDTH];
+               o_wch[j*WCH_WIDTH+:WCH_WIDTH] = {
+                   i_wch[k*I_WCH_WIDTH+:I_WCH_WIDTH][I_WCH_WIDTH-1 : 1+SLV_ID_WIDTH],
+                   i_wch[k*I_WCH_WIDTH+:I_WCH_WIDTH][SLV_ID_WIDTH],
+                   {EXTRA_ID_BITS{1'b0}},
+                   i_wch[k*I_WCH_WIDTH+:I_WCH_WIDTH][SLV_ID_WIDTH-1:0]
+               };
                break;
             end
          end
@@ -715,24 +743,20 @@ generate
          end
       end
 
-      // B response: ID mask routing
-      wire [ID_WIDTH-1:0] bid_from_slv = o_bch[j*BCH_WIDTH+B_ID_LSB+:ID_WIDTH];
+      // B response: ID extension routing
+      wire [MST_ID_WIDTH-1:0] bid_from_slv = o_bch[j*BCH_WIDTH+0+:MST_ID_WIDTH];
+      wire [$clog2(MST_NUM)-1:0] bid_mst_idx = bid_from_slv >> SLV_ID_WIDTH;
 
       always_comb begin
-         for (int k = 0; k < MST_NUM; k++) begin
-            s2m_bvalid[j*MST_NUM+k] = o_bvalid[j] &&
-               ((MST_ID_MASK[k*ID_WIDTH+:ID_WIDTH] & bid_from_slv) == MST_ID_MASK[k*ID_WIDTH+:ID_WIDTH]);
-         end
+         s2m_bvalid[j*MST_NUM+:MST_NUM] = '0;
+         if (o_bvalid[j])
+            s2m_bvalid[j*MST_NUM+bid_mst_idx] = 1'b1;
       end
 
       always_comb begin
          o_bready[j] = 1'b0;
-         for (int k = 0; k < MST_NUM; k++) begin
-            if (s2m_bvalid[j*MST_NUM+k]) begin
-               o_bready[j] = s2m_bready[j*MST_NUM+k];
-               break;
-            end
-         end
+         if (o_bvalid[j])
+            o_bready[j] = s2m_bready[j*MST_NUM+bid_mst_idx];
       end
    end
 endgenerate
@@ -744,6 +768,7 @@ generate
       logic               ar_arb_en;
 
       wire [MST_NUM-1:0] ar_req_masked;
+      wire [$clog2(MST_NUM)-1:0] ar_grant_encoded;
       genvar ark;
       for (ark = 0; ark < MST_NUM; ark++) begin
          assign ar_req_masked[ark] = s2m_arvalid[j*MST_NUM+ark] &&
@@ -760,7 +785,7 @@ generate
          .en                  ( ar_arb_en ),
          .request             ( ar_req_masked ),
          .grant               ( ar_grant ),
-         .selsect             (  )
+         .selsect             ( ar_grant_encoded )
       );
 
       assign o_arvalid[j] = |ar_grant;
@@ -769,9 +794,14 @@ generate
          o_arch[j*ARCH_WIDTH+:ARCH_WIDTH] = '0;
          for (int k = 0; k < MST_NUM; k++) begin
             if (ar_grant[k]) begin
-               o_arch[j*ARCH_WIDTH+:ARCH_WIDTH] = i_arch[k*ARCH_WIDTH+:ARCH_WIDTH];
+               o_arch[j*ARCH_WIDTH+:ARCH_WIDTH] = {
+                   i_arch[k*I_ARCH_WIDTH+:I_ARCH_WIDTH][I_ARCH_WIDTH-1 : ADDR_WIDTH+SLV_ID_WIDTH],
+                   {EXTRA_ID_BITS{1'b0}},
+                   i_arch[k*I_ARCH_WIDTH+:I_ARCH_WIDTH][ADDR_WIDTH+SLV_ID_WIDTH-1:0]
+               };
             end
          end
+         o_arch[j*ARCH_WIDTH+ADDR_WIDTH+:MST_ID_WIDTH] |= ({{MST_ID_WIDTH-$clog2(MST_NUM){1'b0}}, ar_grant_encoded} << SLV_ID_WIDTH);
       end
 
       always_comb begin
@@ -782,23 +812,19 @@ generate
 
       assign ar_arb_en = (|ar_grant) ? o_arready[j] : |s2m_arvalid[j*MST_NUM+:MST_NUM];
 
-      wire [ID_WIDTH-1:0] rid_from_slv = o_rch[j*RCH_WIDTH+R_ID_LSB+:ID_WIDTH];
+      wire [MST_ID_WIDTH-1:0] rid_from_slv = o_rch[j*RCH_WIDTH+1+:MST_ID_WIDTH];
+      wire [$clog2(MST_NUM)-1:0] rid_mst_idx = rid_from_slv >> SLV_ID_WIDTH;
 
       always_comb begin
-         for (int k = 0; k < MST_NUM; k++) begin
-            s2m_rvalid[j*MST_NUM+k] = o_rvalid[j] &&
-               ((MST_ID_MASK[k*ID_WIDTH+:ID_WIDTH] & rid_from_slv) == MST_ID_MASK[k*ID_WIDTH+:ID_WIDTH]);
-         end
+         s2m_rvalid[j*MST_NUM+:MST_NUM] = '0;
+         if (o_rvalid[j])
+            s2m_rvalid[j*MST_NUM+rid_mst_idx] = 1'b1;
       end
 
       always_comb begin
          o_rready[j] = 1'b0;
-         for (int k = 0; k < MST_NUM; k++) begin
-            if (s2m_rvalid[j*MST_NUM+k]) begin
-               o_rready[j] = s2m_rready[j*MST_NUM+k];
-               break;
-            end
-         end
+         if (o_rvalid[j])
+            o_rready[j] = s2m_rready[j*MST_NUM+rid_mst_idx];
       end
    end
 endgenerate
@@ -810,8 +836,8 @@ generate
       logic [ADDR_WIDTH-1:0] awaddr_xlat;
       logic [ADDR_WIDTH-1:0] araddr_xlat;
 
-      wire [ADDR_WIDTH-1:0] awaddr_raw = o_awch[j*AWCH_WIDTH+AW_ADDR_LSB+:ADDR_WIDTH];
-      wire [ADDR_WIDTH-1:0] araddr_raw = o_arch[j*ARCH_WIDTH+AW_ADDR_LSB+:ADDR_WIDTH];
+      wire [ADDR_WIDTH-1:0] awaddr_raw = o_awch[j*AWCH_WIDTH+0+:ADDR_WIDTH];
+      wire [ADDR_WIDTH-1:0] araddr_raw = o_arch[j*ARCH_WIDTH+0+:ADDR_WIDTH];
 
       if (SLV_KEEP_BASE[j]) begin
          assign awaddr_xlat = awaddr_raw;
@@ -836,7 +862,8 @@ generate
          sync_fifo #(
             .WIDTH               ( AWCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "true" )
+            .FWFT                ( "true" ),
+            .RAM_STYLE           ( RAM_STYLE )
          ) u_aw (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -862,7 +889,8 @@ generate
          sync_fifo #(
             .WIDTH               ( WCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "true" )
+            .FWFT                ( "true" ),
+            .RAM_STYLE           ( RAM_STYLE )
          ) u_w (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -876,6 +904,7 @@ generate
             .underflow           ( ),
             .level               ( )
          );
+
          assign o_wready[j] = !w_full;
          assign axi_mst_if[j].wvalid = !w_empty;
          assign {axi_mst_if[j].wdata, axi_mst_if[j].wstrb, axi_mst_if[j].wlast, axi_mst_if[j].wid} = w_rd;
@@ -883,7 +912,8 @@ generate
          sync_fifo #(
             .WIDTH               ( BCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "true" )
+            .FWFT                ( "true" ),
+            .RAM_STYLE           ( RAM_STYLE )
          ) u_b (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -897,13 +927,15 @@ generate
             .underflow           ( ),
             .level               ( )
          );
+
          assign o_bvalid[j] = !b_empty;
          assign axi_mst_if[j].bready = !b_full;
 
          sync_fifo #(
             .WIDTH               ( ARCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "true" )
+            .FWFT                ( "true" ),
+            .RAM_STYLE           ( RAM_STYLE )
          ) u_ar (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -917,6 +949,7 @@ generate
             .underflow           ( ),
             .level               ( )
          );
+
          assign o_arready[j] = !ar_full;
          assign axi_mst_if[j].arvalid = !ar_empty;
          assign {axi_mst_if[j].arregion, axi_mst_if[j].arqos, axi_mst_if[j].arprot,
@@ -928,7 +961,8 @@ generate
          sync_fifo #(
             .WIDTH               ( RCH_WIDTH ),
             .DEPTH               ( BD ),
-            .FWFT                ( "true" )
+            .FWFT                ( "true" ),
+            .RAM_STYLE           ( RAM_STYLE )
          ) u_r (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
@@ -942,6 +976,7 @@ generate
             .underflow           ( ),
             .level               ( )
          );
+
          assign o_rvalid[j] = !r_empty;
          assign axi_mst_if[j].rready = !r_full;
 

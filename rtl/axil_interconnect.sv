@@ -46,10 +46,6 @@ localparam WCH_WIDTH  = DATA_WIDTH + STRB_WIDTH;
 localparam BCH_WIDTH  = 2;
 localparam ARCH_WIDTH = ADDR_WIDTH + 3;
 localparam RCH_WIDTH  = DATA_WIDTH + 2;
-// Interface consistency check
-localparam INTF_ADDR_WIDTH = axil_slv_if[0].ADDR_WIDTH;
-localparam INTF_DATA_WIDTH = axil_slv_if[0].DATA_WIDTH;
-
 // Internal flat channel signals
 genvar i, j;
 logic [MST_NUM          -1:0]    i_awvalid;
@@ -114,13 +110,12 @@ logic [MST_NUM           -1:0]   aw_misrouting;
 logic [MST_NUM           -1:0]   ar_misrouting;
 
 initial begin
-   if (ADDR_WIDTH != INTF_ADDR_WIDTH)
-      $error("ADDR_WIDTH mismatch: module param %0d != if_axil.ADDR_WIDTH %0d", ADDR_WIDTH, INTF_ADDR_WIDTH);
-end
-
-initial begin
-   if (DATA_WIDTH != INTF_DATA_WIDTH)
-      $error("DATA_WIDTH mismatch: module param %0d != if_axil.DATA_WIDTH %0d", DATA_WIDTH, INTF_DATA_WIDTH);
+   for (integer m = 0; m < MST_NUM; m++) begin
+      if (axil_slv_if[m].ADDR_WIDTH != ADDR_WIDTH)
+         $error("axil_slv_if[%0d].ADDR_WIDTH (%0d) != ADDR_WIDTH (%0d)", m, axil_slv_if[m].ADDR_WIDTH, ADDR_WIDTH);
+      if (axil_slv_if[m].DATA_WIDTH != DATA_WIDTH)
+         $error("axil_slv_if[%0d].DATA_WIDTH (%0d) != DATA_WIDTH (%0d)", m, axil_slv_if[m].DATA_WIDTH, DATA_WIDTH);
+   end
 end
 
 initial begin

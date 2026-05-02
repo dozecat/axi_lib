@@ -2,18 +2,19 @@
 
 module axi_interconnect_tb
 #(
-   parameter DATA_WIDTH = 64,
-   parameter ADDR_WIDTH = 32,
-   parameter ID_WIDTH   = 8,
-   parameter STRB_WIDTH = DATA_WIDTH / 8,
-   parameter MST_NUM    = 4,
-   parameter SLV_NUM    = 4
+   parameter DATA_WIDTH    = 64,
+   parameter ADDR_WIDTH    = 32,
+   parameter SLV_ID_WIDTH  = 8,
+   parameter MST_ID_WIDTH  = SLV_ID_WIDTH + $clog2(MST_NUM),
+   parameter STRB_WIDTH    = DATA_WIDTH / 8,
+   parameter MST_NUM       = 4,
+   parameter SLV_NUM       = 4
 )(
    input  wire                    clk,
    input  wire                    rst_n,
 
    input  wire [ADDR_WIDTH-1:0]  slv_awaddr [SLV_NUM],
-   input  wire [ID_WIDTH-1:0]    slv_awid   [SLV_NUM],
+   input  wire [SLV_ID_WIDTH-1:0]    slv_awid   [SLV_NUM],
    input  wire [7:0]             slv_awlen  [SLV_NUM],
    input  wire [2:0]             slv_awsize [SLV_NUM],
    input  wire [1:0]             slv_awburst[SLV_NUM],
@@ -26,16 +27,16 @@ module axi_interconnect_tb
    output logic                  slv_awready[SLV_NUM],
    input  wire [DATA_WIDTH-1:0]  slv_wdata  [SLV_NUM],
    input  wire [STRB_WIDTH-1:0]  slv_wstrb  [SLV_NUM],
-   input  wire [ID_WIDTH-1:0]    slv_wid    [SLV_NUM],
+   input  wire [SLV_ID_WIDTH-1:0]    slv_wid    [SLV_NUM],
    input  wire                   slv_wlast  [SLV_NUM],
    input  wire                   slv_wvalid [SLV_NUM],
    output logic                  slv_wready [SLV_NUM],
    output logic [1:0]            slv_bresp  [SLV_NUM],
-   output logic [ID_WIDTH-1:0]   slv_bid    [SLV_NUM],
+   output logic [SLV_ID_WIDTH-1:0]   slv_bid    [SLV_NUM],
    output logic                  slv_bvalid [SLV_NUM],
    input  wire                   slv_bready [SLV_NUM],
    input  wire [ADDR_WIDTH-1:0]  slv_araddr [SLV_NUM],
-   input  wire [ID_WIDTH-1:0]    slv_arid   [SLV_NUM],
+   input  wire [SLV_ID_WIDTH-1:0]    slv_arid   [SLV_NUM],
    input  wire [7:0]             slv_arlen  [SLV_NUM],
    input  wire [2:0]             slv_arsize [SLV_NUM],
    input  wire [1:0]             slv_arburst[MST_NUM],
@@ -48,13 +49,13 @@ module axi_interconnect_tb
    output logic                  slv_arready[SLV_NUM],
    output logic [DATA_WIDTH-1:0] slv_rdata  [SLV_NUM],
    output logic [1:0]            slv_rresp  [SLV_NUM],
-   output logic [ID_WIDTH-1:0]   slv_rid    [SLV_NUM],
+   output logic [SLV_ID_WIDTH-1:0]   slv_rid    [SLV_NUM],
    output logic                  slv_rlast  [SLV_NUM],
    output logic                  slv_rvalid [SLV_NUM],
    input  wire                   slv_rready [SLV_NUM],
 
    output logic [ADDR_WIDTH-1:0] mst_awaddr [MST_NUM],
-   output logic [ID_WIDTH-1:0]   mst_awid   [MST_NUM],
+   output logic [MST_ID_WIDTH-1:0]   mst_awid   [MST_NUM],
    output logic [7:0]            mst_awlen  [MST_NUM],
    output logic [2:0]            mst_awsize [MST_NUM],
    output logic [1:0]            mst_awburst[MST_NUM],
@@ -67,16 +68,16 @@ module axi_interconnect_tb
    input  wire                   mst_awready[MST_NUM],
    output logic [DATA_WIDTH-1:0] mst_wdata  [MST_NUM],
    output logic [STRB_WIDTH-1:0] mst_wstrb  [MST_NUM],
-   output logic [ID_WIDTH-1:0]   mst_wid    [MST_NUM],
+   output logic [MST_ID_WIDTH-1:0]   mst_wid    [MST_NUM],
    output logic                  mst_wlast  [MST_NUM],
    output logic                  mst_wvalid [MST_NUM],
    input  wire                   mst_wready [MST_NUM],
    input  wire [1:0]             mst_bresp  [MST_NUM],
-   input  wire [ID_WIDTH-1:0]    mst_bid    [MST_NUM],
+   input  wire [MST_ID_WIDTH-1:0]    mst_bid    [MST_NUM],
    input  wire                   mst_bvalid [MST_NUM],
    output logic                  mst_bready [MST_NUM],
    output logic [ADDR_WIDTH-1:0] mst_araddr [MST_NUM],
-   output logic [ID_WIDTH-1:0]   mst_arid   [MST_NUM],
+   output logic [MST_ID_WIDTH-1:0]   mst_arid   [MST_NUM],
    output logic [7:0]            mst_arlen  [MST_NUM],
    output logic [2:0]            mst_arsize [MST_NUM],
    output logic [1:0]            mst_arburst[MST_NUM],
@@ -89,7 +90,7 @@ module axi_interconnect_tb
    input  wire                   mst_arready[MST_NUM],
    input  wire [DATA_WIDTH-1:0]  mst_rdata  [MST_NUM],
    input  wire [1:0]             mst_rresp  [MST_NUM],
-   input  wire [ID_WIDTH-1:0]    mst_rid    [MST_NUM],
+   input  wire [MST_ID_WIDTH-1:0]    mst_rid    [MST_NUM],
    input  wire                   mst_rlast  [MST_NUM],
    input  wire                   mst_rvalid [MST_NUM],
    output logic                  mst_rready [MST_NUM]
@@ -98,9 +99,9 @@ module axi_interconnect_tb
 localparam LEN_WIDTH = 8;
 localparam RESP_WIDTH = 2;
 
-if_axi #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH), .ID_WIDTH(ID_WIDTH))
+if_axi #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH), .ID_WIDTH(SLV_ID_WIDTH))
    axi_slv_if [0:SLV_NUM-1] ();
-if_axi #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH), .ID_WIDTH(ID_WIDTH))
+if_axi #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH), .ID_WIDTH(MST_ID_WIDTH))
    axi_mst_if [0:MST_NUM-1] ();
 
 generate
@@ -196,13 +197,12 @@ endgenerate
 axi_interconnect #(
    .ADDR_WIDTH     ( ADDR_WIDTH ),
    .DATA_WIDTH     ( DATA_WIDTH ),
-   .ID_WIDTH       ( ID_WIDTH ),
+   .SLV_ID_WIDTH       ( SLV_ID_WIDTH ),
    .MST_NUM        ( MST_NUM ),
    .SLV_NUM        ( SLV_NUM ),
    .MST_BUF_EN     ( 4'b1011 ),
    .MST_BUF_DEPTH  ( {16'd4, 16'd0, 16'd4, 16'd256} ),
    .MST_PRIORITY   ( {4'h0, 4'h1, 4'h2, 4'h1} ),
-   .MST_ID_MASK    ( {8'h10, 8'h20, 8'h40, 8'h80} ),
    .SLV_BUF_EN     ( 4'b0101 ),
    .SLV_BUF_DEPTH  ( {16'd0, 16'd4, 16'd0, 16'd4} ),
    .SLV_START_ADDR ( {32'h0000_3000, 32'h0000_2000, 32'h0000_1000, 32'h0000_0000} ),
