@@ -49,7 +49,6 @@ localparam [AWID:0] PTR_ZERO = {(AWID+1){1'b0}};
 localparam [AWID:0] PTR_ONE  = {{AWID{1'b0}}, 1'b1};
 
 // pointer registers
-
 reg [AWID:0] wptr;
 reg [AWID:0] rptr;
 
@@ -64,12 +63,10 @@ assign empty = rempty_val;
 assign level = wptr - rptr;
 
 // qualified enables
-
 wire wren = wr_en & ~full;
 wire rden = rd_en & ~empty;
 
 // write pipeline registers
-
 reg [AWID-1:0] waddr_q;
 reg [WIDTH-1:0] wr_data_q;
 reg wren_q;

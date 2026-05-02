@@ -1,3 +1,21 @@
+//******************************************************************************
+// arbiter.sv
+// SPDX-License-Identifier: MIT
+//
+// Priority-based arbiter with round-robin among equal-priority requesters.
+// Each port has a configurable priority via PRIORITY_CFG.  Among requesters
+// at the highest active priority level, a round-robin pointer determines
+// which port receives the grant.  Grant and binary-encoded select are both
+// registered (1-cycle latency).
+//
+// Parameter ranges:
+//   PORTS          >= 1
+//   PRIORITY_WIDTH >= 1
+//   PRIORITY_CFG   {PORTS*PRIORITY_WIDTH{1'b0}} (default: all zero)
+//
+// https://github.com/dozecat/axi_lib
+//******************************************************************************
+
 `timescale 1ns / 1ps
 `default_nettype none
 

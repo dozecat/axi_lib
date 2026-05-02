@@ -99,97 +99,97 @@ localparam LEN_WIDTH = 8;
 localparam RESP_WIDTH = 2;
 
 if_axi #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH), .ID_WIDTH(ID_WIDTH))
-   slv_axi [0:SLV_NUM-1] ();
+   axi_slv_if [0:SLV_NUM-1] ();
 if_axi #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH), .ID_WIDTH(ID_WIDTH))
-   mst_axi [0:MST_NUM-1] ();
+   axi_mst_if [0:MST_NUM-1] ();
 
 generate
    for (genvar i = 0; i < SLV_NUM; i++) begin
-      assign slv_axi[i].awaddr   = slv_awaddr[i];
-      assign slv_axi[i].awid     = slv_awid[i];
-      assign slv_axi[i].awlen    = slv_awlen[i];
-      assign slv_axi[i].awsize   = slv_awsize[i];
-      assign slv_axi[i].awburst  = slv_awburst[i];
-      assign slv_axi[i].awcache  = slv_awcache[i];
-      assign slv_axi[i].awlock   = slv_awlock[i];
-      assign slv_axi[i].awprot   = slv_awprot[i];
-      assign slv_axi[i].awqos    = slv_awqos[i];
-      assign slv_axi[i].awregion = slv_awregion[i];
-      assign slv_axi[i].awvalid  = slv_awvalid[i];
-      assign slv_awready[i] = slv_axi[i].awready;
-      assign slv_axi[i].wdata    = slv_wdata[i];
-      assign slv_axi[i].wstrb    = slv_wstrb[i];
-      assign slv_axi[i].wid      = slv_wid[i];
-      assign slv_axi[i].wlast    = slv_wlast[i];
-      assign slv_axi[i].wvalid   = slv_wvalid[i];
-      assign slv_wready[i] = slv_axi[i].wready;
-      assign slv_axi[i].bready   = slv_bready[i];
-      assign slv_bresp[i]  = slv_axi[i].bresp;
-      assign slv_bid[i]    = slv_axi[i].bid;
-      assign slv_bvalid[i] = slv_axi[i].bvalid;
-      assign slv_axi[i].araddr   = slv_araddr[i];
-      assign slv_axi[i].arid     = slv_arid[i];
-      assign slv_axi[i].arlen    = slv_arlen[i];
-      assign slv_axi[i].arsize   = slv_arsize[i];
-      assign slv_axi[i].arburst  = slv_arburst[i];
-      assign slv_axi[i].arcache  = slv_arcache[i];
-      assign slv_axi[i].arlock   = slv_arlock[i];
-      assign slv_axi[i].arprot   = slv_arprot[i];
-      assign slv_axi[i].arqos    = slv_arqos[i];
-      assign slv_axi[i].arregion = slv_arregion[i];
-      assign slv_axi[i].arvalid  = slv_arvalid[i];
-      assign slv_arready[i] = slv_axi[i].arready;
-      assign slv_axi[i].rready   = slv_rready[i];
-      assign slv_rdata[i]  = slv_axi[i].rdata;
-      assign slv_rresp[i]  = slv_axi[i].rresp;
-      assign slv_rid[i]    = slv_axi[i].rid;
-      assign slv_rlast[i]  = slv_axi[i].rlast;
-      assign slv_rvalid[i] = slv_axi[i].rvalid;
+      assign axi_slv_if[i].awaddr   = slv_awaddr[i];
+      assign axi_slv_if[i].awid     = slv_awid[i];
+      assign axi_slv_if[i].awlen    = slv_awlen[i];
+      assign axi_slv_if[i].awsize   = slv_awsize[i];
+      assign axi_slv_if[i].awburst  = slv_awburst[i];
+      assign axi_slv_if[i].awcache  = slv_awcache[i];
+      assign axi_slv_if[i].awlock   = slv_awlock[i];
+      assign axi_slv_if[i].awprot   = slv_awprot[i];
+      assign axi_slv_if[i].awqos    = slv_awqos[i];
+      assign axi_slv_if[i].awregion = slv_awregion[i];
+      assign axi_slv_if[i].awvalid  = slv_awvalid[i];
+      assign slv_awready[i] = axi_slv_if[i].awready;
+      assign axi_slv_if[i].wdata    = slv_wdata[i];
+      assign axi_slv_if[i].wstrb    = slv_wstrb[i];
+      assign axi_slv_if[i].wid      = slv_wid[i];
+      assign axi_slv_if[i].wlast    = slv_wlast[i];
+      assign axi_slv_if[i].wvalid   = slv_wvalid[i];
+      assign slv_wready[i] = axi_slv_if[i].wready;
+      assign axi_slv_if[i].bready   = slv_bready[i];
+      assign slv_bresp[i]  = axi_slv_if[i].bresp;
+      assign slv_bid[i]    = axi_slv_if[i].bid;
+      assign slv_bvalid[i] = axi_slv_if[i].bvalid;
+      assign axi_slv_if[i].araddr   = slv_araddr[i];
+      assign axi_slv_if[i].arid     = slv_arid[i];
+      assign axi_slv_if[i].arlen    = slv_arlen[i];
+      assign axi_slv_if[i].arsize   = slv_arsize[i];
+      assign axi_slv_if[i].arburst  = slv_arburst[i];
+      assign axi_slv_if[i].arcache  = slv_arcache[i];
+      assign axi_slv_if[i].arlock   = slv_arlock[i];
+      assign axi_slv_if[i].arprot   = slv_arprot[i];
+      assign axi_slv_if[i].arqos    = slv_arqos[i];
+      assign axi_slv_if[i].arregion = slv_arregion[i];
+      assign axi_slv_if[i].arvalid  = slv_arvalid[i];
+      assign slv_arready[i] = axi_slv_if[i].arready;
+      assign axi_slv_if[i].rready   = slv_rready[i];
+      assign slv_rdata[i]  = axi_slv_if[i].rdata;
+      assign slv_rresp[i]  = axi_slv_if[i].rresp;
+      assign slv_rid[i]    = axi_slv_if[i].rid;
+      assign slv_rlast[i]  = axi_slv_if[i].rlast;
+      assign slv_rvalid[i] = axi_slv_if[i].rvalid;
    end
 endgenerate
 
 generate
    for (genvar i = 0; i < MST_NUM; i++) begin
-      assign mst_awaddr[i]   = mst_axi[i].awaddr;
-      assign mst_awid[i]     = mst_axi[i].awid;
-      assign mst_awlen[i]    = mst_axi[i].awlen;
-      assign mst_awsize[i]   = mst_axi[i].awsize;
-      assign mst_awburst[i]  = mst_axi[i].awburst;
-      assign mst_awcache[i]  = mst_axi[i].awcache;
-      assign mst_awlock[i]   = mst_axi[i].awlock;
-      assign mst_awprot[i]   = mst_axi[i].awprot;
-      assign mst_awqos[i]    = mst_axi[i].awqos;
-      assign mst_awregion[i] = mst_axi[i].awregion;
-      assign mst_awvalid[i]  = mst_axi[i].awvalid;
-      assign mst_axi[i].awready = mst_awready[i];
-      assign mst_wdata[i]    = mst_axi[i].wdata;
-      assign mst_wstrb[i]    = mst_axi[i].wstrb;
-      assign mst_wid[i]      = mst_axi[i].wid;
-      assign mst_wlast[i]    = mst_axi[i].wlast;
-      assign mst_wvalid[i]   = mst_axi[i].wvalid;
-      assign mst_axi[i].wready  = mst_wready[i];
-      assign mst_axi[i].bresp   = mst_bresp[i];
-      assign mst_axi[i].bid     = mst_bid[i];
-      assign mst_axi[i].bvalid  = mst_bvalid[i];
-      assign mst_bready[i]   = mst_axi[i].bready;
-      assign mst_araddr[i]   = mst_axi[i].araddr;
-      assign mst_arid[i]     = mst_axi[i].arid;
-      assign mst_arlen[i]    = mst_axi[i].arlen;
-      assign mst_arsize[i]   = mst_axi[i].arsize;
-      assign mst_arburst[i]  = mst_axi[i].arburst;
-      assign mst_arcache[i]  = mst_axi[i].arcache;
-      assign mst_arlock[i]   = mst_axi[i].arlock;
-      assign mst_arprot[i]   = mst_axi[i].arprot;
-      assign mst_arqos[i]    = mst_axi[i].arqos;
-      assign mst_arregion[i] = mst_axi[i].arregion;
-      assign mst_arvalid[i]  = mst_axi[i].arvalid;
-      assign mst_axi[i].arready = mst_arready[i];
-      assign mst_axi[i].rdata   = mst_rdata[i];
-      assign mst_axi[i].rresp   = mst_rresp[i];
-      assign mst_axi[i].rid     = mst_rid[i];
-      assign mst_axi[i].rlast   = mst_rlast[i];
-      assign mst_axi[i].rvalid  = mst_rvalid[i];
-      assign mst_rready[i]   = mst_axi[i].rready;
+      assign mst_awaddr[i]   = axi_mst_if[i].awaddr;
+      assign mst_awid[i]     = axi_mst_if[i].awid;
+      assign mst_awlen[i]    = axi_mst_if[i].awlen;
+      assign mst_awsize[i]   = axi_mst_if[i].awsize;
+      assign mst_awburst[i]  = axi_mst_if[i].awburst;
+      assign mst_awcache[i]  = axi_mst_if[i].awcache;
+      assign mst_awlock[i]   = axi_mst_if[i].awlock;
+      assign mst_awprot[i]   = axi_mst_if[i].awprot;
+      assign mst_awqos[i]    = axi_mst_if[i].awqos;
+      assign mst_awregion[i] = axi_mst_if[i].awregion;
+      assign mst_awvalid[i]  = axi_mst_if[i].awvalid;
+      assign axi_mst_if[i].awready = mst_awready[i];
+      assign mst_wdata[i]    = axi_mst_if[i].wdata;
+      assign mst_wstrb[i]    = axi_mst_if[i].wstrb;
+      assign mst_wid[i]      = axi_mst_if[i].wid;
+      assign mst_wlast[i]    = axi_mst_if[i].wlast;
+      assign mst_wvalid[i]   = axi_mst_if[i].wvalid;
+      assign axi_mst_if[i].wready  = mst_wready[i];
+      assign axi_mst_if[i].bresp   = mst_bresp[i];
+      assign axi_mst_if[i].bid     = mst_bid[i];
+      assign axi_mst_if[i].bvalid  = mst_bvalid[i];
+      assign mst_bready[i]   = axi_mst_if[i].bready;
+      assign mst_araddr[i]   = axi_mst_if[i].araddr;
+      assign mst_arid[i]     = axi_mst_if[i].arid;
+      assign mst_arlen[i]    = axi_mst_if[i].arlen;
+      assign mst_arsize[i]   = axi_mst_if[i].arsize;
+      assign mst_arburst[i]  = axi_mst_if[i].arburst;
+      assign mst_arcache[i]  = axi_mst_if[i].arcache;
+      assign mst_arlock[i]   = axi_mst_if[i].arlock;
+      assign mst_arprot[i]   = axi_mst_if[i].arprot;
+      assign mst_arqos[i]    = axi_mst_if[i].arqos;
+      assign mst_arregion[i] = axi_mst_if[i].arregion;
+      assign mst_arvalid[i]  = axi_mst_if[i].arvalid;
+      assign axi_mst_if[i].arready = mst_arready[i];
+      assign axi_mst_if[i].rdata   = mst_rdata[i];
+      assign axi_mst_if[i].rresp   = mst_rresp[i];
+      assign axi_mst_if[i].rid     = mst_rid[i];
+      assign axi_mst_if[i].rlast   = mst_rlast[i];
+      assign axi_mst_if[i].rvalid  = mst_rvalid[i];
+      assign mst_rready[i]   = axi_mst_if[i].rready;
    end
 endgenerate
 
@@ -211,8 +211,8 @@ axi_interconnect #(
 ) dut (
    .aclk           ( clk ),
    .aresetn        ( rst_n ),
-   .slv_axi        ( slv_axi ),
-   .mst_axi        ( mst_axi )
+   .axi_slv_if     ( axi_slv_if ),
+   .axi_mst_if     ( axi_mst_if )
 );
 
 endmodule

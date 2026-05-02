@@ -35,8 +35,8 @@ module axil_interconnect
    input  wire                   aclk,
    input  wire                   aresetn,
 
-   if_axil.slave                 slv_axil [0:SLV_NUM-1],
-   if_axil.master                mst_axil [0:SLV_NUM-1]
+   if_axil.slave                 axil_slv_if [0:SLV_NUM-1],
+   if_axil.master                axil_mst_if [0:SLV_NUM-1]
 );
 
 // Local declarations
@@ -47,8 +47,8 @@ localparam BCH_WIDTH  = 2;
 localparam ARCH_WIDTH = ADDR_WIDTH + 3;
 localparam RCH_WIDTH  = DATA_WIDTH + 2;
 // Interface consistency check
-localparam INTF_ADDR_WIDTH = slv_axil[0].ADDR_WIDTH;
-localparam INTF_DATA_WIDTH = slv_axil[0].DATA_WIDTH;
+localparam INTF_ADDR_WIDTH = axil_slv_if[0].ADDR_WIDTH;
+localparam INTF_DATA_WIDTH = axil_slv_if[0].DATA_WIDTH;
 
 // Internal flat channel signals
 genvar i, j;
@@ -154,9 +154,9 @@ generate
       logic [ARCH_WIDTH  -1:0]   arch;
       logic [RCH_WIDTH   -1:0]   rch;
 
-      assign awch = {slv_axil[i].awprot, slv_axil[i].awaddr};
-      assign wch  = {slv_axil[i].wdata,  slv_axil[i].wstrb};
-      assign arch = {slv_axil[i].arprot, slv_axil[i].araddr};
+      assign awch = {axil_slv_if[i].awprot, axil_slv_if[i].awaddr};
+      assign wch  = {axil_slv_if[i].wdata,  axil_slv_if[i].wstrb};
+      assign arch = {axil_slv_if[i].arprot, axil_slv_if[i].araddr};
 
       if (MST_BUF_EN[i]) begin : buffer_on
          localparam BUF_DEPTH = MST_BUF_DEPTH[i*16+:16];
@@ -170,7 +170,7 @@ generate
          ) u_aw (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( slv_axil[i].awvalid && !aw_full ),
+            .wr_en               ( axil_slv_if[i].awvalid && !aw_full ),
             .wr_data             ( awch ),
             .full                ( aw_full ),
             .rd_en               ( i_awready[i] ),
@@ -181,7 +181,7 @@ generate
             .level               ( )
          );
 
-         assign slv_axil[i].awready = !aw_full;
+         assign axil_slv_if[i].awready = !aw_full;
          assign i_awvalid[i] = !aw_empty;
 
          wire w_full, w_empty;
@@ -193,7 +193,7 @@ generate
          ) u_w (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( slv_axil[i].wvalid && !w_full ),
+            .wr_en               ( axil_slv_if[i].wvalid && !w_full ),
             .wr_data             ( wch ),
             .full                ( w_full ),
             .rd_en               ( i_wready[i] ),
@@ -204,7 +204,7 @@ generate
             .level               ( )
          );
 
-         assign slv_axil[i].wready = !w_full;
+         assign axil_slv_if[i].wready = !w_full;
          assign i_wvalid[i] = !w_empty;
 
          wire b_full, b_empty;
@@ -219,7 +219,7 @@ generate
             .wr_en               ( i_bvalid[i] ),
             .wr_data             ( i_bch[i*BCH_WIDTH+:BCH_WIDTH] ),
             .full                ( b_full ),
-            .rd_en               ( slv_axil[i].bready ),
+            .rd_en               ( axil_slv_if[i].bready ),
             .rd_data             ( bch ),
             .empty               ( b_empty ),
             .overflow            ( ),
@@ -228,8 +228,8 @@ generate
          );
 
          assign i_bready[i] = !b_full;
-         assign slv_axil[i].bvalid = !b_empty;
-         assign {slv_axil[i].bresp} = bch;
+         assign axil_slv_if[i].bvalid = !b_empty;
+         assign {axil_slv_if[i].bresp} = bch;
 
          wire ar_full, ar_empty;
 
@@ -240,7 +240,7 @@ generate
          ) u_ar (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( slv_axil[i].arvalid && !ar_full ),
+            .wr_en               ( axil_slv_if[i].arvalid && !ar_full ),
             .wr_data             ( arch ),
             .full                ( ar_full ),
             .rd_en               ( i_arready[i] ),
@@ -251,7 +251,7 @@ generate
             .level               ( )
          );
 
-         assign slv_axil[i].arready = !ar_full;
+         assign axil_slv_if[i].arready = !ar_full;
          assign i_arvalid[i] = !ar_empty;
 
          wire r_full, r_empty;
@@ -266,7 +266,7 @@ generate
             .wr_en               ( i_rvalid[i] ),
             .wr_data             ( i_rch[i*RCH_WIDTH+:RCH_WIDTH] ),
             .full                ( r_full ),
-            .rd_en               ( slv_axil[i].rready ),
+            .rd_en               ( axil_slv_if[i].rready ),
             .rd_data             ( rch ),
             .empty               ( r_empty ),
             .overflow            ( ),
@@ -275,32 +275,32 @@ generate
          );
 
          assign i_rready[i] = !r_full;
-         assign slv_axil[i].rvalid = !r_empty;
-         assign {slv_axil[i].rdata, slv_axil[i].rresp} = rch;
+         assign axil_slv_if[i].rvalid = !r_empty;
+         assign {axil_slv_if[i].rdata, axil_slv_if[i].rresp} = rch;
 
       end else begin : buffer_off
 
-         assign i_awvalid[i]          = slv_axil[i].awvalid;
-         assign slv_axil[i].awready     = i_awready[i];
+         assign i_awvalid[i]          = axil_slv_if[i].awvalid;
+         assign axil_slv_if[i].awready     = i_awready[i];
          assign i_awch[i*AWCH_WIDTH+:AWCH_WIDTH] = awch;
 
-         assign i_wvalid[i]           = slv_axil[i].wvalid;
-         assign slv_axil[i].wready      = i_wready[i];
+         assign i_wvalid[i]           = axil_slv_if[i].wvalid;
+         assign axil_slv_if[i].wready      = i_wready[i];
          assign i_wch[i*WCH_WIDTH+:WCH_WIDTH] = wch;
 
-         assign slv_axil[i].bvalid      = i_bvalid[i];
-         assign i_bready[i]           = slv_axil[i].bready;
+         assign axil_slv_if[i].bvalid      = i_bvalid[i];
+         assign i_bready[i]           = axil_slv_if[i].bready;
          assign bch                   = i_bch[i*BCH_WIDTH+:BCH_WIDTH];
-         assign {slv_axil[i].bresp}     = bch;
+         assign {axil_slv_if[i].bresp}     = bch;
 
-         assign i_arvalid[i]          = slv_axil[i].arvalid;
-         assign slv_axil[i].arready     = i_arready[i];
+         assign i_arvalid[i]          = axil_slv_if[i].arvalid;
+         assign axil_slv_if[i].arready     = i_arready[i];
          assign i_arch[i*ARCH_WIDTH+:ARCH_WIDTH] = arch;
 
-         assign slv_axil[i].rvalid      = i_rvalid[i];
-         assign i_rready[i]           = slv_axil[i].rready;
+         assign axil_slv_if[i].rvalid      = i_rvalid[i];
+         assign i_rready[i]           = axil_slv_if[i].rready;
          assign rch                   = i_rch[i*RCH_WIDTH+:RCH_WIDTH];
-         assign {slv_axil[i].rdata, slv_axil[i].rresp} = rch;
+         assign {axil_slv_if[i].rdata, axil_slv_if[i].rresp} = rch;
       end
    end
 endgenerate
@@ -846,7 +846,7 @@ generate
             .wr_en               ( o_awvalid[j] && !aw_full ),
             .wr_data             ( o_awch[j*AWCH_WIDTH+:AWCH_WIDTH] ),
             .full                ( aw_full ),
-            .rd_en               ( mst_axil[j].awready ),
+            .rd_en               ( axil_mst_if[j].awready ),
             .rd_data             ( aw_rd ),
             .empty               ( aw_empty ),
             .overflow            ( ),
@@ -854,10 +854,10 @@ generate
             .level               ( )
          );
 
-         assign mst_axil[j].awvalid = !aw_empty;
+         assign axil_mst_if[j].awvalid = !aw_empty;
          assign o_awready[j]     = !aw_full;
-         assign mst_axil[j].awprot = aw_rd[AWCH_WIDTH-1:ADDR_WIDTH];
-         assign mst_axil[j].awaddr = awaddr_xlat_buf;
+         assign axil_mst_if[j].awprot = aw_rd[AWCH_WIDTH-1:ADDR_WIDTH];
+         assign axil_mst_if[j].awaddr = awaddr_xlat_buf;
 
          wire w_full, w_empty;
 
@@ -871,15 +871,15 @@ generate
             .wr_en               ( o_wvalid[j] && !w_full ),
             .wr_data             ( o_wch[j*WCH_WIDTH+:WCH_WIDTH] ),
             .full                ( w_full ),
-            .rd_en               ( mst_axil[j].wready ),
-            .rd_data             ( {mst_axil[j].wdata, mst_axil[j].wstrb} ),
+            .rd_en               ( axil_mst_if[j].wready ),
+            .rd_data             ( {axil_mst_if[j].wdata, axil_mst_if[j].wstrb} ),
             .empty               ( w_empty ),
             .overflow            ( ),
             .underflow           ( ),
             .level               ( )
          );
 
-         assign mst_axil[j].wvalid = !w_empty;
+         assign axil_mst_if[j].wvalid = !w_empty;
          assign o_wready[j]     = !w_full;
 
          wire b_full, b_empty;
@@ -891,8 +891,8 @@ generate
          ) u_b (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( mst_axil[j].bvalid && !b_full ),
-            .wr_data             ( mst_axil[j].bresp ),
+            .wr_en               ( axil_mst_if[j].bvalid && !b_full ),
+            .wr_data             ( axil_mst_if[j].bresp ),
             .full                ( b_full ),
             .rd_en               ( o_bready[j] ),
             .rd_data             ( o_bch[j*BCH_WIDTH+:BCH_WIDTH] ),
@@ -903,7 +903,7 @@ generate
          );
 
          assign o_bvalid[j]     = !b_empty;
-         assign mst_axil[j].bready = !b_full;
+         assign axil_mst_if[j].bready = !b_full;
 
          wire ar_full, ar_empty;
 
@@ -917,7 +917,7 @@ generate
             .wr_en               ( o_arvalid[j] && !ar_full ),
             .wr_data             ( o_arch[j*ARCH_WIDTH+:ARCH_WIDTH] ),
             .full                ( ar_full ),
-            .rd_en               ( mst_axil[j].arready ),
+            .rd_en               ( axil_mst_if[j].arready ),
             .rd_data             ( ar_rd ),
             .empty               ( ar_empty ),
             .overflow            ( ),
@@ -925,10 +925,10 @@ generate
             .level               ( )
          );
 
-         assign mst_axil[j].arvalid = !ar_empty;
+         assign axil_mst_if[j].arvalid = !ar_empty;
          assign o_arready[j]     = !ar_full;
-         assign mst_axil[j].arprot = ar_rd[ARCH_WIDTH-1:ADDR_WIDTH];
-         assign mst_axil[j].araddr = araddr_xlat_buf;
+         assign axil_mst_if[j].arprot = ar_rd[ARCH_WIDTH-1:ADDR_WIDTH];
+         assign axil_mst_if[j].araddr = araddr_xlat_buf;
 
          wire r_full, r_empty;
 
@@ -939,8 +939,8 @@ generate
          ) u_r (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( mst_axil[j].rvalid && !r_full ),
-            .wr_data             ( {mst_axil[j].rdata, mst_axil[j].rresp} ),
+            .wr_en               ( axil_mst_if[j].rvalid && !r_full ),
+            .wr_data             ( {axil_mst_if[j].rdata, axil_mst_if[j].rresp} ),
             .full                ( r_full ),
             .rd_en               ( o_rready[j] ),
             .rd_data             ( o_rch[j*RCH_WIDTH+:RCH_WIDTH] ),
@@ -951,33 +951,33 @@ generate
          );
 
          assign o_rvalid[j]     = !r_empty;
-         assign mst_axil[j].rready = !r_full;
+         assign axil_mst_if[j].rready = !r_full;
 
       end else begin : buffer_off
 
-         assign mst_axil[j].awprot   = o_awch[j*AWCH_WIDTH+ADDR_WIDTH+:3];
-         assign mst_axil[j].awaddr   = awaddr_xlat;
-         assign mst_axil[j].awvalid  = o_awvalid[j];
-         assign o_awready[j]       = mst_axil[j].awready;
+         assign axil_mst_if[j].awprot   = o_awch[j*AWCH_WIDTH+ADDR_WIDTH+:3];
+         assign axil_mst_if[j].awaddr   = awaddr_xlat;
+         assign axil_mst_if[j].awvalid  = o_awvalid[j];
+         assign o_awready[j]       = axil_mst_if[j].awready;
 
-         assign {mst_axil[j].wdata, mst_axil[j].wstrb} = o_wch[j*WCH_WIDTH+:WCH_WIDTH];
-         assign mst_axil[j].wvalid   = o_wvalid[j];
-         assign o_wready[j]        = mst_axil[j].wready;
+         assign {axil_mst_if[j].wdata, axil_mst_if[j].wstrb} = o_wch[j*WCH_WIDTH+:WCH_WIDTH];
+         assign axil_mst_if[j].wvalid   = o_wvalid[j];
+         assign o_wready[j]        = axil_mst_if[j].wready;
 
-         assign bch                = {mst_axil[j].bresp};
+         assign bch                = {axil_mst_if[j].bresp};
          assign o_bch[j*BCH_WIDTH+:BCH_WIDTH] = bch;
-         assign o_bvalid[j]        = mst_axil[j].bvalid;
-         assign mst_axil[j].bready   = o_bready[j];
+         assign o_bvalid[j]        = axil_mst_if[j].bvalid;
+         assign axil_mst_if[j].bready   = o_bready[j];
 
-         assign mst_axil[j].arprot   = o_arch[j*ARCH_WIDTH+ADDR_WIDTH+:3];
-         assign mst_axil[j].araddr   = araddr_xlat;
-         assign mst_axil[j].arvalid  = o_arvalid[j];
-         assign o_arready[j]       = mst_axil[j].arready;
+         assign axil_mst_if[j].arprot   = o_arch[j*ARCH_WIDTH+ADDR_WIDTH+:3];
+         assign axil_mst_if[j].araddr   = araddr_xlat;
+         assign axil_mst_if[j].arvalid  = o_arvalid[j];
+         assign o_arready[j]       = axil_mst_if[j].arready;
 
-         assign rch                = {mst_axil[j].rdata, mst_axil[j].rresp};
+         assign rch                = {axil_mst_if[j].rdata, axil_mst_if[j].rresp};
          assign o_rch[j*RCH_WIDTH+:RCH_WIDTH] = rch;
-         assign o_rvalid[j]        = mst_axil[j].rvalid;
-         assign mst_axil[j].rready   = o_rready[j];
+         assign o_rvalid[j]        = axil_mst_if[j].rvalid;
+         assign axil_mst_if[j].rready   = o_rready[j];
       end
    end
 endgenerate

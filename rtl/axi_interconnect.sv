@@ -36,8 +36,8 @@ module axi_interconnect
    input  wire                   aclk,
    input  wire                   aresetn,
 
-   if_axi.slave                  slv_axi [0:MST_NUM-1],
-   if_axi.master                 mst_axi [0:SLV_NUM-1]
+   if_axi.slave                  axi_slv_if [0:MST_NUM-1],
+   if_axi.master                 axi_mst_if [0:SLV_NUM-1]
 );
 
 localparam STRB_WIDTH   = DATA_WIDTH / 8;
@@ -63,9 +63,9 @@ localparam R_ID_LSB    = 1;
 localparam R_RESP_LSB  = 1 + ID_WIDTH;
 localparam R_DATA_LSB  = 1 + ID_WIDTH + RESP_WIDTH;
 
-localparam INTF_ADDR_WIDTH = slv_axi[0].ADDR_WIDTH;
-localparam INTF_DATA_WIDTH = slv_axi[0].DATA_WIDTH;
-localparam INTF_ID_WIDTH   = slv_axi[0].ID_WIDTH;
+localparam INTF_ADDR_WIDTH = axi_slv_if[0].ADDR_WIDTH;
+localparam INTF_DATA_WIDTH = axi_slv_if[0].DATA_WIDTH;
+localparam INTF_ID_WIDTH   = axi_slv_if[0].ID_WIDTH;
 
 // Flat signal declarations
 genvar i, j;
@@ -177,15 +177,15 @@ generate
       logic [ARCH_WIDTH -1:0] arch;
       logic [RCH_WIDTH  -1:0] rch;
 
-      assign awch = {slv_axi[i].awregion, slv_axi[i].awqos, slv_axi[i].awprot,
-                     slv_axi[i].awcache,  slv_axi[i].awlock, slv_axi[i].awburst,
-                     slv_axi[i].awsize,   slv_axi[i].awlen,
-                     slv_axi[i].awid,     slv_axi[i].awaddr};
-      assign wch  = {slv_axi[i].wdata, slv_axi[i].wstrb, slv_axi[i].wlast, slv_axi[i].wid};
-      assign arch = {slv_axi[i].arregion, slv_axi[i].arqos, slv_axi[i].arprot,
-                     slv_axi[i].arcache,  slv_axi[i].arlock, slv_axi[i].arburst,
-                     slv_axi[i].arsize,   slv_axi[i].arlen,
-                     slv_axi[i].arid,     slv_axi[i].araddr};
+      assign awch = {axi_slv_if[i].awregion, axi_slv_if[i].awqos, axi_slv_if[i].awprot,
+                     axi_slv_if[i].awcache,  axi_slv_if[i].awlock, axi_slv_if[i].awburst,
+                     axi_slv_if[i].awsize,   axi_slv_if[i].awlen,
+                     axi_slv_if[i].awid,     axi_slv_if[i].awaddr};
+      assign wch  = {axi_slv_if[i].wdata, axi_slv_if[i].wstrb, axi_slv_if[i].wlast, axi_slv_if[i].wid};
+      assign arch = {axi_slv_if[i].arregion, axi_slv_if[i].arqos, axi_slv_if[i].arprot,
+                     axi_slv_if[i].arcache,  axi_slv_if[i].arlock, axi_slv_if[i].arburst,
+                     axi_slv_if[i].arsize,   axi_slv_if[i].arlen,
+                     axi_slv_if[i].arid,     axi_slv_if[i].araddr};
 
       if (MST_BUF_EN[i]) begin : buffer_on
          localparam BD = MST_BUF_DEPTH[i*16+:16];
@@ -199,7 +199,7 @@ generate
          ) u_aw (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( slv_axi[i].awvalid && !aw_full ),
+            .wr_en               ( axi_slv_if[i].awvalid && !aw_full ),
             .wr_data             ( awch ),
             .full                ( aw_full ),
             .rd_en               ( i_awready[i] ),
@@ -209,7 +209,7 @@ generate
             .underflow           ( ),
             .level               ( )
          );
-         assign slv_axi[i].awready = !aw_full;
+         assign axi_slv_if[i].awready = !aw_full;
          assign i_awvalid[i] = !aw_empty;
          wire [ADDR_WIDTH-1:0] awaddr_dbg;
          assign awaddr_dbg = i_awch[i*AWCH_WIDTH+:ADDR_WIDTH];
@@ -221,7 +221,7 @@ generate
          ) u_w (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( slv_axi[i].wvalid && !w_full ),
+            .wr_en               ( axi_slv_if[i].wvalid && !w_full ),
             .wr_data             ( wch ),
             .full                ( w_full ),
             .rd_en               ( i_wready[i] ),
@@ -231,7 +231,7 @@ generate
             .underflow           ( ),
             .level               ( )
          );
-         assign slv_axi[i].wready = !w_full;
+         assign axi_slv_if[i].wready = !w_full;
          assign i_wvalid[i] = !w_empty;
 
          sync_fifo #(
@@ -244,7 +244,7 @@ generate
             .wr_en               ( i_bvalid[i] ),
             .wr_data             ( i_bch[i*BCH_WIDTH+:BCH_WIDTH] ),
             .full                ( b_full ),
-            .rd_en               ( slv_axi[i].bready ),
+            .rd_en               ( axi_slv_if[i].bready ),
             .rd_data             ( bch ),
             .empty               ( b_empty ),
             .overflow            ( ),
@@ -252,7 +252,7 @@ generate
             .level               ( )
          );
          assign i_bready[i] = !b_full;
-         assign slv_axi[i].bvalid = !b_empty;
+         assign axi_slv_if[i].bvalid = !b_empty;
 
          sync_fifo #(
             .WIDTH               ( ARCH_WIDTH ),
@@ -261,7 +261,7 @@ generate
          ) u_ar (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( slv_axi[i].arvalid && !ar_full ),
+            .wr_en               ( axi_slv_if[i].arvalid && !ar_full ),
             .wr_data             ( arch ),
             .full                ( ar_full ),
             .rd_en               ( i_arready[i] ),
@@ -271,7 +271,7 @@ generate
             .underflow           ( ),
             .level               ( )
          );
-         assign slv_axi[i].arready = !ar_full;
+         assign axi_slv_if[i].arready = !ar_full;
          assign i_arvalid[i] = !ar_empty;
          wire [ADDR_WIDTH-1:0] araddr_dbg;
          assign araddr_dbg = i_arch[i*ARCH_WIDTH+:ADDR_WIDTH];
@@ -286,7 +286,7 @@ generate
             .wr_en               ( i_rvalid[i] ),
             .wr_data             ( i_rch[i*RCH_WIDTH+:RCH_WIDTH] ),
             .full                ( r_full ),
-            .rd_en               ( slv_axi[i].rready ),
+            .rd_en               ( axi_slv_if[i].rready ),
             .rd_data             ( rch ),
             .empty               ( r_empty ),
             .overflow            ( ),
@@ -294,27 +294,27 @@ generate
             .level               ( )
          );
          assign i_rready[i] = !r_full;
-         assign slv_axi[i].rvalid = !r_empty;
+         assign axi_slv_if[i].rvalid = !r_empty;
 
-         assign {slv_axi[i].bresp, slv_axi[i].bid} = bch;
-         assign {slv_axi[i].rdata, slv_axi[i].rresp, slv_axi[i].rid, slv_axi[i].rlast} = rch;
+         assign {axi_slv_if[i].bresp, axi_slv_if[i].bid} = bch;
+         assign {axi_slv_if[i].rdata, axi_slv_if[i].rresp, axi_slv_if[i].rid, axi_slv_if[i].rlast} = rch;
 
       end else begin : buffer_off
-         assign i_awvalid[i] = slv_axi[i].awvalid;
-         assign slv_axi[i].awready = i_awready[i];
+         assign i_awvalid[i] = axi_slv_if[i].awvalid;
+         assign axi_slv_if[i].awready = i_awready[i];
          assign i_awch[i*AWCH_WIDTH+:AWCH_WIDTH] = awch;
-         assign i_wvalid[i] = slv_axi[i].wvalid;
-         assign slv_axi[i].wready = i_wready[i];
+         assign i_wvalid[i] = axi_slv_if[i].wvalid;
+         assign axi_slv_if[i].wready = i_wready[i];
          assign i_wch[i*WCH_WIDTH+:WCH_WIDTH] = wch;
-         assign slv_axi[i].bvalid = i_bvalid[i];
-         assign i_bready[i] = slv_axi[i].bready;
-         assign {slv_axi[i].bresp, slv_axi[i].bid} = i_bch[i*BCH_WIDTH+:BCH_WIDTH];
-         assign i_arvalid[i] = slv_axi[i].arvalid;
-         assign slv_axi[i].arready = i_arready[i];
+         assign axi_slv_if[i].bvalid = i_bvalid[i];
+         assign i_bready[i] = axi_slv_if[i].bready;
+         assign {axi_slv_if[i].bresp, axi_slv_if[i].bid} = i_bch[i*BCH_WIDTH+:BCH_WIDTH];
+         assign i_arvalid[i] = axi_slv_if[i].arvalid;
+         assign axi_slv_if[i].arready = i_arready[i];
          assign i_arch[i*ARCH_WIDTH+:ARCH_WIDTH] = arch;
-         assign slv_axi[i].rvalid = i_rvalid[i];
-         assign i_rready[i] = slv_axi[i].rready;
-         assign {slv_axi[i].rdata, slv_axi[i].rresp, slv_axi[i].rid, slv_axi[i].rlast} = i_rch[i*RCH_WIDTH+:RCH_WIDTH];
+         assign axi_slv_if[i].rvalid = i_rvalid[i];
+         assign i_rready[i] = axi_slv_if[i].rready;
+         assign {axi_slv_if[i].rdata, axi_slv_if[i].rresp, axi_slv_if[i].rid, axi_slv_if[i].rlast} = i_rch[i*RCH_WIDTH+:RCH_WIDTH];
       end
    end
 endgenerate
@@ -843,20 +843,21 @@ generate
             .wr_en               ( o_awvalid[j] && !aw_full ),
             .wr_data             ( o_awch[j*AWCH_WIDTH+:AWCH_WIDTH] ),
             .full                ( aw_full ),
-            .rd_en               ( mst_axi[j].awready ),
+            .rd_en               ( axi_mst_if[j].awready ),
             .rd_data             ( aw_rd ),
             .empty               ( aw_empty ),
             .overflow            ( ),
             .underflow           ( ),
             .level               ( )
          );
+
          assign o_awready[j] = !aw_full;
-         assign mst_axi[j].awvalid = !aw_empty;
-         assign {mst_axi[j].awregion, mst_axi[j].awqos, mst_axi[j].awprot,
-                 mst_axi[j].awcache,  mst_axi[j].awlock, mst_axi[j].awburst,
-                 mst_axi[j].awsize,   mst_axi[j].awlen,
-                 mst_axi[j].awid} = aw_rd[AWCH_WIDTH-1:ADDR_WIDTH];
-         assign mst_axi[j].awaddr = awaddr_xlat_buf;
+         assign axi_mst_if[j].awvalid = !aw_empty;
+         assign {axi_mst_if[j].awregion, axi_mst_if[j].awqos, axi_mst_if[j].awprot,
+                 axi_mst_if[j].awcache,  axi_mst_if[j].awlock, axi_mst_if[j].awburst,
+                 axi_mst_if[j].awsize,   axi_mst_if[j].awlen,
+                 axi_mst_if[j].awid} = aw_rd[AWCH_WIDTH-1:ADDR_WIDTH];
+         assign axi_mst_if[j].awaddr = awaddr_xlat_buf;
 
          sync_fifo #(
             .WIDTH               ( WCH_WIDTH ),
@@ -868,7 +869,7 @@ generate
             .wr_en               ( o_wvalid[j] && !w_full ),
             .wr_data             ( o_wch[j*WCH_WIDTH+:WCH_WIDTH] ),
             .full                ( w_full ),
-            .rd_en               ( mst_axi[j].wready ),
+            .rd_en               ( axi_mst_if[j].wready ),
             .rd_data             ( w_rd ),
             .empty               ( w_empty ),
             .overflow            ( ),
@@ -876,8 +877,8 @@ generate
             .level               ( )
          );
          assign o_wready[j] = !w_full;
-         assign mst_axi[j].wvalid = !w_empty;
-         assign {mst_axi[j].wdata, mst_axi[j].wstrb, mst_axi[j].wlast, mst_axi[j].wid} = w_rd;
+         assign axi_mst_if[j].wvalid = !w_empty;
+         assign {axi_mst_if[j].wdata, axi_mst_if[j].wstrb, axi_mst_if[j].wlast, axi_mst_if[j].wid} = w_rd;
 
          sync_fifo #(
             .WIDTH               ( BCH_WIDTH ),
@@ -886,8 +887,8 @@ generate
          ) u_b (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( mst_axi[j].bvalid && !b_full ),
-            .wr_data             ( {mst_axi[j].bresp, mst_axi[j].bid} ),
+            .wr_en               ( axi_mst_if[j].bvalid && !b_full ),
+            .wr_data             ( {axi_mst_if[j].bresp, axi_mst_if[j].bid} ),
             .full                ( b_full ),
             .rd_en               ( o_bready[j] ),
             .rd_data             ( o_bch[j*BCH_WIDTH+:BCH_WIDTH] ),
@@ -897,7 +898,7 @@ generate
             .level               ( )
          );
          assign o_bvalid[j] = !b_empty;
-         assign mst_axi[j].bready = !b_full;
+         assign axi_mst_if[j].bready = !b_full;
 
          sync_fifo #(
             .WIDTH               ( ARCH_WIDTH ),
@@ -909,7 +910,7 @@ generate
             .wr_en               ( o_arvalid[j] && !ar_full ),
             .wr_data             ( o_arch[j*ARCH_WIDTH+:ARCH_WIDTH] ),
             .full                ( ar_full ),
-            .rd_en               ( mst_axi[j].arready ),
+            .rd_en               ( axi_mst_if[j].arready ),
             .rd_data             ( ar_rd ),
             .empty               ( ar_empty ),
             .overflow            ( ),
@@ -917,12 +918,12 @@ generate
             .level               ( )
          );
          assign o_arready[j] = !ar_full;
-         assign mst_axi[j].arvalid = !ar_empty;
-         assign {mst_axi[j].arregion, mst_axi[j].arqos, mst_axi[j].arprot,
-                 mst_axi[j].arcache,  mst_axi[j].arlock, mst_axi[j].arburst,
-                 mst_axi[j].arsize,   mst_axi[j].arlen,
-                 mst_axi[j].arid} = ar_rd[ARCH_WIDTH-1:ADDR_WIDTH];
-         assign mst_axi[j].araddr = araddr_xlat_buf;
+         assign axi_mst_if[j].arvalid = !ar_empty;
+         assign {axi_mst_if[j].arregion, axi_mst_if[j].arqos, axi_mst_if[j].arprot,
+                 axi_mst_if[j].arcache,  axi_mst_if[j].arlock, axi_mst_if[j].arburst,
+                 axi_mst_if[j].arsize,   axi_mst_if[j].arlen,
+                 axi_mst_if[j].arid} = ar_rd[ARCH_WIDTH-1:ADDR_WIDTH];
+         assign axi_mst_if[j].araddr = araddr_xlat_buf;
 
          sync_fifo #(
             .WIDTH               ( RCH_WIDTH ),
@@ -931,8 +932,8 @@ generate
          ) u_r (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( mst_axi[j].rvalid && !r_full ),
-            .wr_data             ( {mst_axi[j].rdata, mst_axi[j].rresp, mst_axi[j].rid, mst_axi[j].rlast} ),
+            .wr_en               ( axi_mst_if[j].rvalid && !r_full ),
+            .wr_data             ( {axi_mst_if[j].rdata, axi_mst_if[j].rresp, axi_mst_if[j].rid, axi_mst_if[j].rlast} ),
             .full                ( r_full ),
             .rd_en               ( o_rready[j] ),
             .rd_data             ( o_rch[j*RCH_WIDTH+:RCH_WIDTH] ),
@@ -942,39 +943,39 @@ generate
             .level               ( )
          );
          assign o_rvalid[j] = !r_empty;
-         assign mst_axi[j].rready = !r_full;
+         assign axi_mst_if[j].rready = !r_full;
 
       end else begin : buffer_off
          wire [AWCH_WIDTH-1:0] aw_tmp = o_awch[j*AWCH_WIDTH+:AWCH_WIDTH];
-         assign {mst_axi[j].awregion, mst_axi[j].awqos, mst_axi[j].awprot,
-                 mst_axi[j].awcache,  mst_axi[j].awlock, mst_axi[j].awburst,
-                 mst_axi[j].awsize,   mst_axi[j].awlen,
-                 mst_axi[j].awid} = aw_tmp[AWCH_WIDTH-1:ADDR_WIDTH];
-         assign mst_axi[j].awaddr = awaddr_xlat;
-         assign mst_axi[j].awvalid = o_awvalid[j];
-         assign o_awready[j] = mst_axi[j].awready;
+         assign {axi_mst_if[j].awregion, axi_mst_if[j].awqos, axi_mst_if[j].awprot,
+                 axi_mst_if[j].awcache,  axi_mst_if[j].awlock, axi_mst_if[j].awburst,
+                 axi_mst_if[j].awsize,   axi_mst_if[j].awlen,
+                 axi_mst_if[j].awid} = aw_tmp[AWCH_WIDTH-1:ADDR_WIDTH];
+         assign axi_mst_if[j].awaddr = awaddr_xlat;
+         assign axi_mst_if[j].awvalid = o_awvalid[j];
+         assign o_awready[j] = axi_mst_if[j].awready;
 
          wire [WCH_WIDTH-1:0] w_tmp = o_wch[j*WCH_WIDTH+:WCH_WIDTH];
-         assign {mst_axi[j].wdata, mst_axi[j].wstrb, mst_axi[j].wlast, mst_axi[j].wid} = w_tmp;
-         assign mst_axi[j].wvalid = o_wvalid[j];
-         assign o_wready[j] = mst_axi[j].wready;
+         assign {axi_mst_if[j].wdata, axi_mst_if[j].wstrb, axi_mst_if[j].wlast, axi_mst_if[j].wid} = w_tmp;
+         assign axi_mst_if[j].wvalid = o_wvalid[j];
+         assign o_wready[j] = axi_mst_if[j].wready;
 
-         assign o_bch[j*BCH_WIDTH+:BCH_WIDTH] = {mst_axi[j].bresp, mst_axi[j].bid};
-         assign o_bvalid[j] = mst_axi[j].bvalid;
-         assign mst_axi[j].bready = o_bready[j];
+         assign o_bch[j*BCH_WIDTH+:BCH_WIDTH] = {axi_mst_if[j].bresp, axi_mst_if[j].bid};
+         assign o_bvalid[j] = axi_mst_if[j].bvalid;
+         assign axi_mst_if[j].bready = o_bready[j];
 
          wire [ARCH_WIDTH-1:0] ar_tmp = o_arch[j*ARCH_WIDTH+:ARCH_WIDTH];
-         assign {mst_axi[j].arregion, mst_axi[j].arqos, mst_axi[j].arprot,
-                 mst_axi[j].arcache,  mst_axi[j].arlock, mst_axi[j].arburst,
-                 mst_axi[j].arsize,   mst_axi[j].arlen,
-                 mst_axi[j].arid} = ar_tmp[ARCH_WIDTH-1:ADDR_WIDTH];
-         assign mst_axi[j].araddr = araddr_xlat;
-         assign mst_axi[j].arvalid = o_arvalid[j];
-         assign o_arready[j] = mst_axi[j].arready;
+         assign {axi_mst_if[j].arregion, axi_mst_if[j].arqos, axi_mst_if[j].arprot,
+                 axi_mst_if[j].arcache,  axi_mst_if[j].arlock, axi_mst_if[j].arburst,
+                 axi_mst_if[j].arsize,   axi_mst_if[j].arlen,
+                 axi_mst_if[j].arid} = ar_tmp[ARCH_WIDTH-1:ADDR_WIDTH];
+         assign axi_mst_if[j].araddr = araddr_xlat;
+         assign axi_mst_if[j].arvalid = o_arvalid[j];
+         assign o_arready[j] = axi_mst_if[j].arready;
 
-         assign o_rch[j*RCH_WIDTH+:RCH_WIDTH] = {mst_axi[j].rdata, mst_axi[j].rresp, mst_axi[j].rid, mst_axi[j].rlast};
-         assign o_rvalid[j] = mst_axi[j].rvalid;
-         assign mst_axi[j].rready = o_rready[j];
+         assign o_rch[j*RCH_WIDTH+:RCH_WIDTH] = {axi_mst_if[j].rdata, axi_mst_if[j].rresp, axi_mst_if[j].rid, axi_mst_if[j].rlast};
+         assign o_rvalid[j] = axi_mst_if[j].rvalid;
+         assign axi_mst_if[j].rready = o_rready[j];
       end
    end
 endgenerate
