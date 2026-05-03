@@ -197,7 +197,7 @@ endgenerate
 axi_interconnect #(
    .ADDR_WIDTH     ( ADDR_WIDTH ),
    .DATA_WIDTH     ( DATA_WIDTH ),
-   .SLV_ID_WIDTH       ( SLV_ID_WIDTH ),
+   .SLV_ID_WIDTH   ( SLV_ID_WIDTH ),
    .MST_NUM        ( MST_NUM ),
    .SLV_NUM        ( SLV_NUM ),
    .MST_BUF_EN     ( 4'b1011 ),

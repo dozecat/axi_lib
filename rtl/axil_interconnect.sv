@@ -1,11 +1,11 @@
 //*****************************************************************************
 // Copyright (C) 2026 dozecat. All rights reserved.
 // SPDX-License-Identifier: MIT
-// 
+//
 // File:        axil_interconnect.sv
 // Description: AXI4-Lite Interconnect
 // Repository:  https://github.com/dozecat/axi_lib.git
-// 
+//
 // Modification History:
 // Ver   Who       Date        Changes
 // ----  ----  ----------  ----------------------------------------------------
@@ -23,11 +23,10 @@ module axil_interconnect
    parameter DATA_WIDTH          = 32,
    parameter PRIORITY_WIDTH      = 4,
    parameter TRK_DEPTH           = 4,
-   parameter MST_BUF_EN          = {MST_NUM{1'b0}},
-   parameter MST_BUF_DEPTH       = {MST_NUM{16'b0}},
+   parameter TRK_RAM_STYLE       = "distributed",
+   parameter MST_SKID_EN         = {MST_NUM{1'b0}},
    parameter MST_PRIORITY        = {MST_NUM*PRIORITY_WIDTH{1'b0}},
-   parameter SLV_BUF_EN          = {SLV_NUM{1'b0}},
-   parameter SLV_BUF_DEPTH       = {SLV_NUM{16'b0}},
+   parameter SLV_SKID_EN         = {SLV_NUM{1'b0}},
    parameter SLV_START_ADDR      = {SLV_NUM*ADDR_WIDTH{1'b0}},
    parameter SLV_END_ADDR        = {SLV_NUM*ADDR_WIDTH{1'b1}},
    parameter SLV_KEEP_BASE       = {SLV_NUM{1'b0}}
@@ -118,28 +117,6 @@ initial begin
    end
 end
 
-initial begin
-   for (integer m = 0; m < MST_NUM; m++) begin
-      if (MST_BUF_EN[m]) begin
-         if (MST_BUF_DEPTH[m*16+:16] < 2)
-            $error("MST_BUF_EN[%0d] enabled but MST_BUF_DEPTH[%0d]=%0d (< 2)", m, m, MST_BUF_DEPTH[m*16+:16]);
-         if ((MST_BUF_DEPTH[m*16+:16] & (MST_BUF_DEPTH[m*16+:16] - 1)) != 0)
-            $error("MST_BUF_EN[%0d] enabled but MST_BUF_DEPTH[%0d]=%0d (not power-of-2)", m, m, MST_BUF_DEPTH[m*16+:16]);
-      end
-   end
-end
-
-initial begin
-   for (integer s = 0; s < SLV_NUM; s++) begin
-      if (SLV_BUF_EN[s]) begin
-         if (SLV_BUF_DEPTH[s*16+:16] < 2)
-            $error("SLV_BUF_EN[%0d] enabled but SLV_BUF_DEPTH[%0d]=%0d (< 2)", s, s, SLV_BUF_DEPTH[s*16+:16]);
-         if ((SLV_BUF_DEPTH[s*16+:16] & (SLV_BUF_DEPTH[s*16+:16] - 1)) != 0)
-            $error("SLV_BUF_EN[%0d] enabled but SLV_BUF_DEPTH[%0d]=%0d (not power-of-2)", s, s, SLV_BUF_DEPTH[s*16+:16]);
-      end
-   end
-end
-
 // SLAVE INTERFACE (per master)
 generate
    for (i = 0; i < MST_NUM; i++) begin : slv_if
@@ -153,148 +130,97 @@ generate
       assign wch  = {axil_slv_if[i].wdata,  axil_slv_if[i].wstrb};
       assign arch = {axil_slv_if[i].arprot, axil_slv_if[i].araddr};
 
-      if (MST_BUF_EN[i]) begin : buffer_on
-         localparam BUF_DEPTH = MST_BUF_DEPTH[i*16+:16];
+      if (MST_SKID_EN[i]) begin : buffer_on
 
-         wire aw_full, aw_empty;
+          skid_buffer #(
+             .WIDTH               ( AWCH_WIDTH )
+          ) u_aw (
+             .clk                 ( aclk ),
+             .rst                 ( ~aresetn ),
+             .data_i              ( awch ),
+             .valid_i             ( axil_slv_if[i].awvalid ),
+             .ready_o             ( axil_slv_if[i].awready ),
+             .data_o              ( i_awch[i*AWCH_WIDTH+:AWCH_WIDTH] ),
+             .valid_o             ( i_awvalid[i] ),
+             .ready_i             ( i_awready[i] )
+          );
 
-         sync_fifo #(
-            .WIDTH               ( AWCH_WIDTH ),
-            .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "true" )
-         ) u_aw (
-            .clk                 ( aclk ),
-            .rst                 ( ~aresetn ),
-            .wr_en               ( axil_slv_if[i].awvalid && !aw_full ),
-            .wr_data             ( awch ),
-            .full                ( aw_full ),
-            .rd_en               ( i_awready[i] ),
-            .rd_data             ( i_awch[i*AWCH_WIDTH+:AWCH_WIDTH] ),
-            .empty               ( aw_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
-         );
+          skid_buffer #(
+             .WIDTH               ( WCH_WIDTH )
+          ) u_w (
+             .clk                 ( aclk ),
+             .rst                 ( ~aresetn ),
+             .data_i              ( wch ),
+             .valid_i             ( axil_slv_if[i].wvalid ),
+             .ready_o             ( axil_slv_if[i].wready ),
+             .data_o              ( i_wch[i*WCH_WIDTH+:WCH_WIDTH] ),
+             .valid_o             ( i_wvalid[i] ),
+             .ready_i             ( i_wready[i] )
+          );
 
-         assign axil_slv_if[i].awready = !aw_full;
-         assign i_awvalid[i] = !aw_empty;
+          skid_buffer #(
+             .WIDTH               ( BCH_WIDTH )
+          ) u_b (
+             .clk                 ( aclk ),
+             .rst                 ( ~aresetn ),
+             .data_i              ( i_bch[i*BCH_WIDTH+:BCH_WIDTH] ),
+             .valid_i             ( i_bvalid[i] ),
+             .ready_o             ( i_bready[i] ),
+             .data_o              ( bch ),
+             .valid_o             ( axil_slv_if[i].bvalid ),
+             .ready_i             ( axil_slv_if[i].bready )
+          );
+          assign {axil_slv_if[i].bresp} = bch;
 
-         wire w_full, w_empty;
+          skid_buffer #(
+             .WIDTH               ( ARCH_WIDTH )
+          ) u_ar (
+             .clk                 ( aclk ),
+             .rst                 ( ~aresetn ),
+             .data_i              ( arch ),
+             .valid_i             ( axil_slv_if[i].arvalid ),
+             .ready_o             ( axil_slv_if[i].arready ),
+             .data_o              ( i_arch[i*ARCH_WIDTH+:ARCH_WIDTH] ),
+             .valid_o             ( i_arvalid[i] ),
+             .ready_i             ( i_arready[i] )
+          );
 
-         sync_fifo #(
-            .WIDTH               ( WCH_WIDTH ),
-            .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "true" )
-         ) u_w (
-            .clk                 ( aclk ),
-            .rst                 ( ~aresetn ),
-            .wr_en               ( axil_slv_if[i].wvalid && !w_full ),
-            .wr_data             ( wch ),
-            .full                ( w_full ),
-            .rd_en               ( i_wready[i] ),
-            .rd_data             ( i_wch[i*WCH_WIDTH+:WCH_WIDTH] ),
-            .empty               ( w_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
-         );
-
-         assign axil_slv_if[i].wready = !w_full;
-         assign i_wvalid[i] = !w_empty;
-
-         wire b_full, b_empty;
-
-         sync_fifo #(
-            .WIDTH               ( BCH_WIDTH ),
-            .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "true" )
-         ) u_b (
-            .clk                 ( aclk ),
-            .rst                 ( ~aresetn ),
-            .wr_en               ( i_bvalid[i] ),
-            .wr_data             ( i_bch[i*BCH_WIDTH+:BCH_WIDTH] ),
-            .full                ( b_full ),
-            .rd_en               ( axil_slv_if[i].bready ),
-            .rd_data             ( bch ),
-            .empty               ( b_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
-         );
-
-         assign i_bready[i] = !b_full;
-         assign axil_slv_if[i].bvalid = !b_empty;
-         assign {axil_slv_if[i].bresp} = bch;
-
-         wire ar_full, ar_empty;
-
-         sync_fifo #(
-            .WIDTH               ( ARCH_WIDTH ),
-            .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "true" )
-         ) u_ar (
-            .clk                 ( aclk ),
-            .rst                 ( ~aresetn ),
-            .wr_en               ( axil_slv_if[i].arvalid && !ar_full ),
-            .wr_data             ( arch ),
-            .full                ( ar_full ),
-            .rd_en               ( i_arready[i] ),
-            .rd_data             ( i_arch[i*ARCH_WIDTH+:ARCH_WIDTH] ),
-            .empty               ( ar_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
-         );
-
-         assign axil_slv_if[i].arready = !ar_full;
-         assign i_arvalid[i] = !ar_empty;
-
-         wire r_full, r_empty;
-
-         sync_fifo #(
-            .WIDTH               ( RCH_WIDTH ),
-            .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "true" )
-         ) u_r (
-            .clk                 ( aclk ),
-            .rst                 ( ~aresetn ),
-            .wr_en               ( i_rvalid[i] ),
-            .wr_data             ( i_rch[i*RCH_WIDTH+:RCH_WIDTH] ),
-            .full                ( r_full ),
-            .rd_en               ( axil_slv_if[i].rready ),
-            .rd_data             ( rch ),
-            .empty               ( r_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
-         );
-
-         assign i_rready[i] = !r_full;
-         assign axil_slv_if[i].rvalid = !r_empty;
-         assign {axil_slv_if[i].rdata, axil_slv_if[i].rresp} = rch;
+          skid_buffer #(
+             .WIDTH               ( RCH_WIDTH )
+          ) u_r (
+             .clk                 ( aclk ),
+             .rst                 ( ~aresetn ),
+             .data_i              ( i_rch[i*RCH_WIDTH+:RCH_WIDTH] ),
+             .valid_i             ( i_rvalid[i] ),
+             .ready_o             ( i_rready[i] ),
+             .data_o              ( rch ),
+             .valid_o             ( axil_slv_if[i].rvalid ),
+             .ready_i             ( axil_slv_if[i].rready )
+          );
+          assign {axil_slv_if[i].rdata, axil_slv_if[i].rresp} = rch;
 
       end else begin : buffer_off
 
-         assign i_awvalid[i]          = axil_slv_if[i].awvalid;
-         assign axil_slv_if[i].awready     = i_awready[i];
+         assign i_awvalid[i] = axil_slv_if[i].awvalid;
+         assign axil_slv_if[i].awready = i_awready[i];
          assign i_awch[i*AWCH_WIDTH+:AWCH_WIDTH] = awch;
 
-         assign i_wvalid[i]           = axil_slv_if[i].wvalid;
-         assign axil_slv_if[i].wready      = i_wready[i];
+         assign i_wvalid[i] = axil_slv_if[i].wvalid;
+         assign axil_slv_if[i].wready = i_wready[i];
          assign i_wch[i*WCH_WIDTH+:WCH_WIDTH] = wch;
 
-         assign axil_slv_if[i].bvalid      = i_bvalid[i];
-         assign i_bready[i]           = axil_slv_if[i].bready;
-         assign bch                   = i_bch[i*BCH_WIDTH+:BCH_WIDTH];
-         assign {axil_slv_if[i].bresp}     = bch;
+         assign axil_slv_if[i].bvalid = i_bvalid[i];
+         assign i_bready[i] = axil_slv_if[i].bready;
+         assign bch = i_bch[i*BCH_WIDTH+:BCH_WIDTH];
+         assign {axil_slv_if[i].bresp} = bch;
 
-         assign i_arvalid[i]          = axil_slv_if[i].arvalid;
-         assign axil_slv_if[i].arready     = i_arready[i];
+         assign i_arvalid[i] = axil_slv_if[i].arvalid;
+         assign axil_slv_if[i].arready = i_arready[i];
          assign i_arch[i*ARCH_WIDTH+:ARCH_WIDTH] = arch;
 
-         assign axil_slv_if[i].rvalid      = i_rvalid[i];
-         assign i_rready[i]           = axil_slv_if[i].rready;
-         assign rch                   = i_rch[i*RCH_WIDTH+:RCH_WIDTH];
+         assign axil_slv_if[i].rvalid = i_rvalid[i];
+         assign i_rready[i] = axil_slv_if[i].rready;
+         assign rch = i_rch[i*RCH_WIDTH+:RCH_WIDTH];
          assign {axil_slv_if[i].rdata, axil_slv_if[i].rresp} = rch;
       end
    end
@@ -335,7 +261,8 @@ generate
       sync_fifo #(
          .WIDTH               ( SLV_NUM ),
          .DEPTH               ( TRK_DEPTH ),
-         .FWFT                ( "true" )
+         .FWFT                ( "true" ),
+         .RAM_STYLE           ( TRK_RAM_STYLE )
       ) u_wtrk (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
@@ -353,7 +280,8 @@ generate
       sync_fifo #(
          .WIDTH               ( SLV_NUM ),
          .DEPTH               ( TRK_DEPTH ),
-         .FWFT                ( "true" )
+         .FWFT                ( "true" ),
+         .RAM_STYLE           ( TRK_RAM_STYLE )
       ) u_btrk (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
@@ -453,7 +381,8 @@ generate
       sync_fifo #(
          .WIDTH               ( SLV_NUM ),
          .DEPTH               ( TRK_DEPTH ),
-         .FWFT                ( "true" )
+         .FWFT                ( "true" ),
+         .RAM_STYLE           ( TRK_RAM_STYLE )
       ) u_rtrk (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
@@ -611,7 +540,8 @@ generate
       sync_fifo #(
          .WIDTH               ( MST_NUM ),
          .DEPTH               ( TRK_DEPTH ),
-         .FWFT                ( "true" )
+         .FWFT                ( "true" ),
+         .RAM_STYLE           ( TRK_RAM_STYLE )
       ) u_awgnt (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
@@ -629,7 +559,8 @@ generate
       sync_fifo #(
          .WIDTH               ( MST_NUM ),
          .DEPTH               ( TRK_DEPTH ),
-         .FWFT                ( "true" )
+         .FWFT                ( "true" ),
+         .RAM_STYLE           ( TRK_RAM_STYLE )
       ) u_btrk (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
@@ -736,6 +667,7 @@ generate
             end
          end
       end
+
       assign o_arvalid[j] = o_arvalid_sel;
       always_comb begin
          o_arch[j*ARCH_WIDTH+:ARCH_WIDTH] = '0;
@@ -757,7 +689,8 @@ generate
       sync_fifo #(
          .WIDTH               ( MST_NUM ),
          .DEPTH               ( TRK_DEPTH ),
-         .FWFT                ( "true" )
+         .FWFT                ( "true" ),
+         .RAM_STYLE           ( TRK_RAM_STYLE )
       ) u_rtrk (
          .clk                 ( aclk ),
          .rst                 ( ~aresetn ),
@@ -818,9 +751,7 @@ generate
          assign araddr_xlat = o_arch[j*ARCH_WIDTH+:ADDR_WIDTH] - base;
       end
 
-      if (SLV_BUF_EN[j]) begin : buffer_on
-
-         localparam BUF_DEPTH = SLV_BUF_DEPTH[j*16+:16];
+      if (SLV_SKID_EN[j]) begin : buffer_on
 
          wire [AWCH_WIDTH-1:0] aw_rd;
          wire [ARCH_WIDTH-1:0] ar_rd;
@@ -829,124 +760,74 @@ generate
          wire [ADDR_WIDTH-1:0] awaddr_xlat_buf = SLV_KEEP_BASE[j] ? awaddr_buf : (awaddr_buf - base);
          wire [ADDR_WIDTH-1:0] araddr_xlat_buf = SLV_KEEP_BASE[j] ? araddr_buf : (araddr_buf - base);
 
-         wire aw_full, aw_empty;
+          skid_buffer #(
+             .WIDTH               ( AWCH_WIDTH )
+          ) u_aw (
+             .clk                 ( aclk ),
+             .rst                 ( ~aresetn ),
+             .data_i              ( o_awch[j*AWCH_WIDTH+:AWCH_WIDTH] ),
+             .valid_i             ( o_awvalid[j] ),
+             .ready_o             ( o_awready[j] ),
+             .data_o              ( aw_rd ),
+             .valid_o             ( axil_mst_if[j].awvalid ),
+             .ready_i             ( axil_mst_if[j].awready )
+          );
+          assign axil_mst_if[j].awprot = aw_rd[AWCH_WIDTH-1:ADDR_WIDTH];
+          assign axil_mst_if[j].awaddr = awaddr_xlat_buf;
 
-         sync_fifo #(
-            .WIDTH               ( AWCH_WIDTH ),
-            .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "true" )
-         ) u_aw (
-            .clk                 ( aclk ),
-            .rst                 ( ~aresetn ),
-            .wr_en               ( o_awvalid[j] && !aw_full ),
-            .wr_data             ( o_awch[j*AWCH_WIDTH+:AWCH_WIDTH] ),
-            .full                ( aw_full ),
-            .rd_en               ( axil_mst_if[j].awready ),
-            .rd_data             ( aw_rd ),
-            .empty               ( aw_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
-         );
+          skid_buffer #(
+             .WIDTH               ( WCH_WIDTH )
+          ) u_w (
+             .clk                 ( aclk ),
+             .rst                 ( ~aresetn ),
+             .data_i              ( o_wch[j*WCH_WIDTH+:WCH_WIDTH] ),
+             .valid_i             ( o_wvalid[j] ),
+             .ready_o             ( o_wready[j] ),
+             .data_o              ( {axil_mst_if[j].wdata, axil_mst_if[j].wstrb} ),
+             .valid_o             ( axil_mst_if[j].wvalid ),
+             .ready_i             ( axil_mst_if[j].wready )
+          );
 
-         assign axil_mst_if[j].awvalid = !aw_empty;
-         assign o_awready[j]     = !aw_full;
-         assign axil_mst_if[j].awprot = aw_rd[AWCH_WIDTH-1:ADDR_WIDTH];
-         assign axil_mst_if[j].awaddr = awaddr_xlat_buf;
+          skid_buffer #(
+             .WIDTH               ( BCH_WIDTH )
+          ) u_b (
+             .clk                 ( aclk ),
+             .rst                 ( ~aresetn ),
+             .data_i              ( axil_mst_if[j].bresp ),
+             .valid_i             ( axil_mst_if[j].bvalid ),
+             .ready_o             ( axil_mst_if[j].bready ),
+             .data_o              ( o_bch[j*BCH_WIDTH+:BCH_WIDTH] ),
+             .valid_o             ( o_bvalid[j] ),
+             .ready_i             ( o_bready[j] )
+          );
 
-         wire w_full, w_empty;
-
-         sync_fifo #(
-            .WIDTH               ( WCH_WIDTH ),
-            .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "true" )
-         ) u_w (
-            .clk                 ( aclk ),
-            .rst                 ( ~aresetn ),
-            .wr_en               ( o_wvalid[j] && !w_full ),
-            .wr_data             ( o_wch[j*WCH_WIDTH+:WCH_WIDTH] ),
-            .full                ( w_full ),
-            .rd_en               ( axil_mst_if[j].wready ),
-            .rd_data             ( {axil_mst_if[j].wdata, axil_mst_if[j].wstrb} ),
-            .empty               ( w_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
-         );
-
-         assign axil_mst_if[j].wvalid = !w_empty;
-         assign o_wready[j]     = !w_full;
-
-         wire b_full, b_empty;
-
-         sync_fifo #(
-            .WIDTH               ( BCH_WIDTH ),
-            .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "true" )
-         ) u_b (
-            .clk                 ( aclk ),
-            .rst                 ( ~aresetn ),
-            .wr_en               ( axil_mst_if[j].bvalid && !b_full ),
-            .wr_data             ( axil_mst_if[j].bresp ),
-            .full                ( b_full ),
-            .rd_en               ( o_bready[j] ),
-            .rd_data             ( o_bch[j*BCH_WIDTH+:BCH_WIDTH] ),
-            .empty               ( b_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
-         );
-
-         assign o_bvalid[j]     = !b_empty;
-         assign axil_mst_if[j].bready = !b_full;
-
-         wire ar_full, ar_empty;
-
-         sync_fifo #(
-            .WIDTH               ( ARCH_WIDTH ),
-            .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "true" )
-         ) u_ar (
-            .clk                 ( aclk ),
-            .rst                 ( ~aresetn ),
-            .wr_en               ( o_arvalid[j] && !ar_full ),
-            .wr_data             ( o_arch[j*ARCH_WIDTH+:ARCH_WIDTH] ),
-            .full                ( ar_full ),
-            .rd_en               ( axil_mst_if[j].arready ),
-            .rd_data             ( ar_rd ),
-            .empty               ( ar_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
-         );
-
-         assign axil_mst_if[j].arvalid = !ar_empty;
-         assign o_arready[j]     = !ar_full;
+          skid_buffer #(
+             .WIDTH               ( ARCH_WIDTH )
+          ) u_ar (
+             .clk                 ( aclk ),
+             .rst                 ( ~aresetn ),
+             .data_i              ( o_arch[j*ARCH_WIDTH+:ARCH_WIDTH] ),
+             .valid_i             ( o_arvalid[j] ),
+             .ready_o             ( o_arready[j] ),
+             .data_o              ( ar_rd ),
+             .valid_o             ( axil_mst_if[j].arvalid ),
+             .ready_i             ( axil_mst_if[j].arready )
+          );
          assign axil_mst_if[j].arprot = ar_rd[ARCH_WIDTH-1:ADDR_WIDTH];
          assign axil_mst_if[j].araddr = araddr_xlat_buf;
 
-         wire r_full, r_empty;
-
-         sync_fifo #(
-            .WIDTH               ( RCH_WIDTH ),
-            .DEPTH               ( BUF_DEPTH ),
-            .FWFT                ( "true" )
-         ) u_r (
-            .clk                 ( aclk ),
-            .rst                 ( ~aresetn ),
-            .wr_en               ( axil_mst_if[j].rvalid && !r_full ),
-            .wr_data             ( {axil_mst_if[j].rdata, axil_mst_if[j].rresp} ),
-            .full                ( r_full ),
-            .rd_en               ( o_rready[j] ),
-            .rd_data             ( o_rch[j*RCH_WIDTH+:RCH_WIDTH] ),
-            .empty               ( r_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
-         );
-
-         assign o_rvalid[j]     = !r_empty;
-         assign axil_mst_if[j].rready = !r_full;
+          skid_buffer #(
+             .WIDTH               ( RCH_WIDTH )
+          ) u_r (
+             .clk                 ( aclk ),
+             .rst                 ( ~aresetn ),
+             .data_i              ( {axil_mst_if[j].rdata, axil_mst_if[j].rresp} ),
+             .valid_i             ( axil_mst_if[j].rvalid ),
+             .ready_o             ( axil_mst_if[j].rready ),
+             .data_o              ( o_rch[j*RCH_WIDTH+:RCH_WIDTH] ),
+             .valid_o             ( o_rvalid[j] ),
+             .ready_i             ( o_rready[j] )
+          );
 
       end else begin : buffer_off
 

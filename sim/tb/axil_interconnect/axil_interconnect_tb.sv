@@ -1,11 +1,11 @@
 //*****************************************************************************
 // Copyright (C) 2025 dozecat. All rights reserved.
 // SPDX-License-Identifier: MIT
-// 
+//
 // File:        axil_interconnect_tb.sv
 // Description: AXI4-Lite Interconnect Testbench Wrapper
 // Repository:  https://github.com/dozecat/axi_lib.git
-// 
+//
 // Modification History:
 // Ver   Who       Date        Changes
 // ----  ----  ----------  ----------------------------------------------------
@@ -375,11 +375,9 @@ axil_interconnect
    .MST_NUM         ( 4 ),
    .SLV_NUM         ( 4 ),
 
-   .MST_BUF_EN      ( 4'b1010 ),
-   .MST_BUF_DEPTH   ( {16'd4, 16'd0, 16'd4, 16'd0} ),
+   .MST_SKID_EN     ( 4'b1010 ),
    .MST_PRIORITY    ( {4'h0, 4'h1, 4'h2, 4'h1} ),
-   .SLV_BUF_EN      ( 4'b0101 ),
-   .SLV_BUF_DEPTH   ( {16'd0, 16'd4, 16'd0, 16'd4} ),
+   .SLV_SKID_EN     ( 4'b0101 ),
 
    .SLV_START_ADDR  ( {16'h0300, 16'h0200, 16'h0100, 16'h0000} ),
    .SLV_END_ADDR    ( {16'h03FF, 16'h02FF, 16'h01FF, 16'h00FF} ),
@@ -393,5 +391,5 @@ dut
    .axil_slv_if     ( axil_slv_if ),
    .axil_mst_if     ( axil_mst_if )
 );
-                           
+
 endmodule

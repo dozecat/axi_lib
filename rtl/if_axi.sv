@@ -1,11 +1,11 @@
 //*****************************************************************************
 // Copyright (C) 2025 dozecat. All rights reserved.
 // SPDX-License-Identifier: MIT
-// 
+//
 // File:        if_axi.sv
 // Description: AXI4 Interface Definition
 // Repository:  https://github.com/dozecat/axi_lib.git
-// 
+//
 // Modification History:
 // Ver   Who       Date        Changes
 // ----  ----  ----------  ----------------------------------------------------
@@ -166,6 +166,49 @@ modport slave (
    output wready,
    input  wstrb,
    input  wvalid
+);
+
+modport monitor (
+   input araddr,
+   input arburst,
+   input arcache,
+   input arid,
+   input arlen,
+   input arlock,
+   input arprot,
+   input arqos,
+   input arready,
+   input arregion,
+   input arsize,
+   input arvalid,
+   input awaddr,
+   input awburst,
+   input awcache,
+   input awid,
+   input awlen,
+   input awlock,
+   input awprot,
+   input awqos,
+   input awready,
+   input awregion,
+   input awsize,
+   input awvalid,
+   input bid,
+   input bready,
+   input bresp,
+   input bvalid,
+   input rdata,
+   input rid,
+   input rlast,
+   input rready,
+   input rresp,
+   input rvalid,
+   input wdata,
+   input wid,
+   input wlast,
+   input wready,
+   input wstrb,
+   input wvalid
 );
 
 endinterface

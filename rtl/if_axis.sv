@@ -1,11 +1,11 @@
 //*****************************************************************************
 // Copyright (C) 2025 dozecat. All rights reserved.
 // SPDX-License-Identifier: MIT
-// 
+//
 // File:        if_axis.sv
 // Description: AXI4-Stream Interface Definition
 // Repository:  https://github.com/dozecat/axi_lib.git
-// 
+//
 // Modification History:
 // Ver   Who       Date        Changes
 // ----  ----  ----------  ----------------------------------------------------
@@ -58,6 +58,19 @@ modport slave
    input  tuser,
    input  tid,
    input  tvalid
+);
+
+modport monitor
+(
+   input tdata,
+   input tdest,
+   input tkeep,
+   input tstrb,
+   input tlast,
+   input tready,
+   input tuser,
+   input tid,
+   input tvalid
 );
 
 endinterface

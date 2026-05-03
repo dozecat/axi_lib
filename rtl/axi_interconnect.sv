@@ -1,11 +1,11 @@
 //*****************************************************************************
 // Copyright (C) 2026 dozecat. All rights reserved.
 // SPDX-License-Identifier: MIT
-// 
+//
 // File:        axi_interconnect.sv
 // Description: AXI4 Interconnect
 // Repository:  https://github.com/dozecat/axi_lib.git
-// 
+//
 // Modification History:
 // Ver   Who       Date        Changes
 // ----  ----  ----------  ----------------------------------------------------
@@ -194,30 +194,20 @@ generate
 
       if (MST_BUF_EN[i]) begin : buffer_on
          localparam BD = MST_BUF_DEPTH[i*16+:16];
-         wire aw_full, aw_empty, w_full, w_empty, b_full, b_empty;
-         wire ar_full, ar_empty, r_full, r_empty;
+         wire w_full, w_empty, r_full, r_empty;
 
-         sync_fifo #(
-            .WIDTH               ( I_AWCH_WIDTH ),
-            .DEPTH               ( BD ),
-            .FWFT                ( "true" ),
-            .RAM_STYLE           ( RAM_STYLE )
+         skid_buffer #(
+            .WIDTH               ( I_AWCH_WIDTH )
          ) u_aw (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( axi_slv_if[i].awvalid && !aw_full ),
-            .wr_data             ( awch ),
-            .full                ( aw_full ),
-            .rd_en               ( i_awready[i] ),
-            .rd_data             ( i_awch[i*I_AWCH_WIDTH+:I_AWCH_WIDTH] ),
-            .empty               ( aw_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
+            .data_i              ( awch ),
+            .valid_i             ( axi_slv_if[i].awvalid ),
+            .ready_o             ( axi_slv_if[i].awready ),
+            .data_o              ( i_awch[i*I_AWCH_WIDTH+:I_AWCH_WIDTH] ),
+            .valid_o             ( i_awvalid[i] ),
+            .ready_i             ( i_awready[i] )
          );
-
-         assign axi_slv_if[i].awready = !aw_full;
-         assign i_awvalid[i] = !aw_empty;
 
          sync_fifo #(
             .WIDTH               ( I_WCH_WIDTH ),
@@ -241,48 +231,31 @@ generate
          assign axi_slv_if[i].wready = !w_full;
          assign i_wvalid[i] = !w_empty;
 
-         sync_fifo #(
-            .WIDTH               ( BCH_WIDTH ),
-            .DEPTH               ( BD ),
-            .FWFT                ( "true" ),
-            .RAM_STYLE           ( RAM_STYLE )
+         skid_buffer #(
+            .WIDTH               ( BCH_WIDTH )
          ) u_b (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( i_bvalid[i] ),
-            .wr_data             ( i_bch[i*BCH_WIDTH+:BCH_WIDTH] ),
-            .full                ( b_full ),
-            .rd_en               ( axi_slv_if[i].bready ),
-            .rd_data             ( bch ),
-            .empty               ( b_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
+            .data_i              ( i_bch[i*BCH_WIDTH+:BCH_WIDTH] ),
+            .valid_i             ( i_bvalid[i] ),
+            .ready_o             ( i_bready[i] ),
+            .data_o              ( bch ),
+            .valid_o             ( axi_slv_if[i].bvalid ),
+            .ready_i             ( axi_slv_if[i].bready )
          );
 
-         assign i_bready[i] = !b_full;
-         assign axi_slv_if[i].bvalid = !b_empty;
-
-         sync_fifo #(
-            .WIDTH               ( I_ARCH_WIDTH ),
-            .DEPTH               ( BD ),
-            .FWFT                ( "true" ),
-            .RAM_STYLE           ( RAM_STYLE )
+         skid_buffer #(
+            .WIDTH               ( I_ARCH_WIDTH )
          ) u_ar (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( axi_slv_if[i].arvalid && !ar_full ),
-            .wr_data             ( arch ),
-            .full                ( ar_full ),
-            .rd_en               ( i_arready[i] ),
-            .rd_data             ( i_arch[i*I_ARCH_WIDTH+:I_ARCH_WIDTH] ),
-            .empty               ( ar_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
+            .data_i              ( arch ),
+            .valid_i             ( axi_slv_if[i].arvalid ),
+            .ready_o             ( axi_slv_if[i].arready ),
+            .data_o              ( i_arch[i*I_ARCH_WIDTH+:I_ARCH_WIDTH] ),
+            .valid_o             ( i_arvalid[i] ),
+            .ready_i             ( i_arready[i] )
          );
-         assign axi_slv_if[i].arready = !ar_full;
-         assign i_arvalid[i] = !ar_empty;
 
          sync_fifo #(
             .WIDTH               ( RCH_WIDTH ),
@@ -545,12 +518,12 @@ generate
             r_trk_target <= '0;
             r_burst_active <= 1'b0;
           end else if (ar_valid_targeted && !r_trk_valid) begin
-             r_trk_valid <= 1'b1;
-             r_trk_target <= slv_ar_targeted;
-             r_burst_active <= 1'b1;
+            r_trk_valid <= 1'b1;
+            r_trk_target <= slv_ar_targeted;
+            r_burst_active <= 1'b1;
           end else if (r_burst_active && i_rvalid[i] && i_rready[i] && rlast_cur) begin
-             r_burst_active <= 1'b0;
-             r_trk_valid <= 1'b0;
+            r_burst_active <= 1'b0;
+            r_trk_valid <= 1'b0;
           end
       end
 
@@ -856,30 +829,20 @@ generate
          wire [ADDR_WIDTH-1:0] araddr_buf = ar_rd[ADDR_WIDTH-1:0];
          wire [ADDR_WIDTH-1:0] awaddr_xlat_buf = SLV_KEEP_BASE[j] ? awaddr_buf : (awaddr_buf - base);
          wire [ADDR_WIDTH-1:0] araddr_xlat_buf = SLV_KEEP_BASE[j] ? araddr_buf : (araddr_buf - base);
-         wire aw_full, aw_empty, w_full, w_empty, b_full, b_empty;
-         wire ar_full, ar_empty, r_full, r_empty;
+         wire w_full, w_empty, r_full, r_empty;
 
-         sync_fifo #(
-            .WIDTH               ( AWCH_WIDTH ),
-            .DEPTH               ( BD ),
-            .FWFT                ( "true" ),
-            .RAM_STYLE           ( RAM_STYLE )
+         skid_buffer #(
+            .WIDTH               ( AWCH_WIDTH )
          ) u_aw (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( o_awvalid[j] && !aw_full ),
-            .wr_data             ( o_awch[j*AWCH_WIDTH+:AWCH_WIDTH] ),
-            .full                ( aw_full ),
-            .rd_en               ( axi_mst_if[j].awready ),
-            .rd_data             ( aw_rd ),
-            .empty               ( aw_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
+            .data_i              ( o_awch[j*AWCH_WIDTH+:AWCH_WIDTH] ),
+            .valid_i             ( o_awvalid[j] ),
+            .ready_o             ( o_awready[j] ),
+            .data_o              ( aw_rd ),
+            .valid_o             ( axi_mst_if[j].awvalid ),
+            .ready_i             ( axi_mst_if[j].awready )
          );
-
-         assign o_awready[j] = !aw_full;
-         assign axi_mst_if[j].awvalid = !aw_empty;
          assign {axi_mst_if[j].awregion, axi_mst_if[j].awqos, axi_mst_if[j].awprot,
                  axi_mst_if[j].awcache,  axi_mst_if[j].awlock, axi_mst_if[j].awburst,
                  axi_mst_if[j].awsize,   axi_mst_if[j].awlen,
@@ -909,49 +872,31 @@ generate
          assign axi_mst_if[j].wvalid = !w_empty;
          assign {axi_mst_if[j].wdata, axi_mst_if[j].wstrb, axi_mst_if[j].wlast, axi_mst_if[j].wid} = w_rd;
 
-         sync_fifo #(
-            .WIDTH               ( BCH_WIDTH ),
-            .DEPTH               ( BD ),
-            .FWFT                ( "true" ),
-            .RAM_STYLE           ( RAM_STYLE )
+         skid_buffer #(
+            .WIDTH               ( BCH_WIDTH )
          ) u_b (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( axi_mst_if[j].bvalid && !b_full ),
-            .wr_data             ( {axi_mst_if[j].bresp, axi_mst_if[j].bid} ),
-            .full                ( b_full ),
-            .rd_en               ( o_bready[j] ),
-            .rd_data             ( o_bch[j*BCH_WIDTH+:BCH_WIDTH] ),
-            .empty               ( b_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
+            .data_i              ( {axi_mst_if[j].bresp, axi_mst_if[j].bid} ),
+            .valid_i             ( axi_mst_if[j].bvalid ),
+            .ready_o             ( axi_mst_if[j].bready ),
+            .data_o              ( o_bch[j*BCH_WIDTH+:BCH_WIDTH] ),
+            .valid_o             ( o_bvalid[j] ),
+            .ready_i             ( o_bready[j] )
          );
 
-         assign o_bvalid[j] = !b_empty;
-         assign axi_mst_if[j].bready = !b_full;
-
-         sync_fifo #(
-            .WIDTH               ( ARCH_WIDTH ),
-            .DEPTH               ( BD ),
-            .FWFT                ( "true" ),
-            .RAM_STYLE           ( RAM_STYLE )
+         skid_buffer #(
+            .WIDTH               ( ARCH_WIDTH )
          ) u_ar (
             .clk                 ( aclk ),
             .rst                 ( ~aresetn ),
-            .wr_en               ( o_arvalid[j] && !ar_full ),
-            .wr_data             ( o_arch[j*ARCH_WIDTH+:ARCH_WIDTH] ),
-            .full                ( ar_full ),
-            .rd_en               ( axi_mst_if[j].arready ),
-            .rd_data             ( ar_rd ),
-            .empty               ( ar_empty ),
-            .overflow            ( ),
-            .underflow           ( ),
-            .level               ( )
+            .data_i              ( o_arch[j*ARCH_WIDTH+:ARCH_WIDTH] ),
+            .valid_i             ( o_arvalid[j] ),
+            .ready_o             ( o_arready[j] ),
+            .data_o              ( ar_rd ),
+            .valid_o             ( axi_mst_if[j].arvalid ),
+            .ready_i             ( axi_mst_if[j].arready )
          );
-
-         assign o_arready[j] = !ar_full;
-         assign axi_mst_if[j].arvalid = !ar_empty;
          assign {axi_mst_if[j].arregion, axi_mst_if[j].arqos, axi_mst_if[j].arprot,
                  axi_mst_if[j].arcache,  axi_mst_if[j].arlock, axi_mst_if[j].arburst,
                  axi_mst_if[j].arsize,   axi_mst_if[j].arlen,
