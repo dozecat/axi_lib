@@ -7,15 +7,15 @@
 <span id="en">axi_lib</span>
 ===========================
 
-**axi_lib** is a SystemVerilog AXI interconnect RTL library for FPGA/ASIC designs. Simulation uses [Verilator](https://www.veripool.org/verilator/) with BFMs from [vaxivip](https://github.com/dozecat/vaxivip.git). It provides AXI4 and AXI4-Lite crossbar interconnects plus primitive components (arbiter, sync/async FIFOs, skid buffer) for building AXI-based systems.
+**axi_lib** is a SystemVerilog AXI RTL library for FPGA/ASIC designs. It provides AXI4/AXI4-Lite/AXI4-Stream interconnect and function modules, plus primitive components (arbiter, sync/async FIFOs, skid buffer). Simulation uses [Verilator](https://www.veripool.org/verilator/) with BFMs from [vaxivip](https://github.com/dozecat/vaxivip.git).
 
 ## ✨ Features
 
-| Module | Type | Description |
-|--------|------|-------------|
-| **`axi_interconnect`** (`rtl/axi_interconnect.sv`) | AXI4 Crossbar | Multi-master, multi-slave AXI4 interconnect with configurable address map, burst support (FIXED/INCR/WRAP), and per-port buffering |
-| **`axil_interconnect`** (`rtl/axil_interconnect.sv`) | AXI4-Lite Crossbar | Multi-master, multi-slave AXI4-Lite interconnect with address decode, arbitration, and per-port buffering |
-| **`arbiter`** (`rtl/arbiter.sv`) | Arbiter | Parameterizable fixed-priority arbiter |
+- AXI4, AXI4-Lite and AXI4-Stream functional modules
+- Parameterized design: flexible port count, address map and burst type configuration
+- Reusable primitive components: arbiter, FIFOs, skid buffer
+- Verilator-verified with C++ BFM testbenches
+- MIT licensed
 
 ## 🚀 Quick Start
 
@@ -169,15 +169,15 @@ Copyright (c) 2025 dozecat
 <span id="cn">axi_lib</span>
 ===========================
 
-**axi_lib** 是一个基于 SystemVerilog 的 AXI 互连 RTL 库，适用于 FPGA/ASIC 设计，采用 [Verilator](https://www.veripool.org/verilator/) 仿真，仿真模型使用 [vaxivip](https://github.com/dozecat/vaxivip.git) 库中的 BFM。它提供 AXI4 和 AXI4-Lite 交叉开关互连以及基本组件（仲裁器、同步/异步 FIFO、skid buffer 缓冲器）。
+**axi_lib** 是一个 SystemVerilog AXI RTL 库，适用于 FPGA/ASIC。提供 AXI4/AXI4-Lite/AXI4-Stream 互连与功能模块，以及仲裁器、FIFO、skid buffer 等基础组件。仿真采用 [Verilator](https://www.veripool.org/verilator/)，BFM 来自 [vaxivip](https://github.com/dozecat/vaxivip.git)。
 
 ## ✨ 特性概览
 
-| 模块 | 类型 | 功能描述 |
-|------|------|----------|
-| **`axi_interconnect`** (`rtl/axi_interconnect.sv`) | AXI4 交叉开关 | 多主多从 AXI4 互连，支持 FIXED/INCR/WRAP 突发和可配置地址映射 |
-| **`axil_interconnect`** (`rtl/axil_interconnect.sv`) | AXI4-Lite 交叉开关 | 多主多从 AXI4-Lite 互连，带地址译码和仲裁 |
-| **`arbiter`** (`rtl/arbiter.sv`) | 仲裁器 | 参数化固定优先级仲裁器 |
+- 提供 AXI4、AXI4-Lite、AXI4-Stream 相关的功能模块
+- 参数化设计：灵活配置端口数量、地址映射和突发类型
+- 内置仲裁器、FIFO、skid buffer 等基础组件，可独立复用
+- Verilator 验证，配套 C++ BFM 测试平台
+- MIT 许可
 
 ## 🚀 快速开始
 
