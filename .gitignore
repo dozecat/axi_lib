@@ -1,2 +1,4 @@
 .DS_Store
+.stamp.verilate
+*.vcd
 obj_dir

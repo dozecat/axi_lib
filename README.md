@@ -55,6 +55,8 @@ make waves    # requires gtkwave
 │   ├── if_axis.sv              # AXI4-Stream interface
 │   ├── axi_interconnect.sv     # AXI4 crossbar interconnect
 │   ├── axil_interconnect.sv    # AXI4-Lite crossbar interconnect
+│   ├── axi2axil.sv             # AXI4 to AXI4-Lite bridge
+│   ├── axil2axi.sv             # AXI4-Lite to AXI4 bridge
 │   ├── arbiter.sv              # Priority arbiter
 │   ├── sync_fifo.v             # Synchronous FIFO
 │   ├── async_fifo.v            # Asynchronous FIFO (dual-clock)
@@ -68,7 +70,9 @@ make waves    # requires gtkwave
 │   │   └── sig.hpp             # Signal type helpers
 │   └── tb/                     # Testbenches
 │       ├── axi_interconnect/   # AXI4 crossbar TB
-│       └── axil_interconnect/  # AXI4-Lite crossbar TB
+│       ├── axil_interconnect/  # AXI4-Lite crossbar TB
+│       ├── axi2axil/           # AXI4 to AXI4-Lite bridge TB
+│       └── axil2axi/           # AXI4-Lite to AXI4 bridge TB
 ├── AGENTS.md
 └── README.md
 ```
@@ -79,6 +83,8 @@ make waves    # requires gtkwave
 |--------|----------|-------------|
 | **`axi_interconnect`** (`rtl/axi_interconnect.sv`) | **AXI4** | Configurable multi-master multi-slave crossbar with arbitration, optional per-port input/output FIFO buffering, address decode routing |
 | **`axil_interconnect`** (`rtl/axil_interconnect.sv`) | **AXI4-Lite** | Configurable multi-master multi-slave crossbar with arbitration, optional per-port skid buffer, address decode routing |
+| **`axi2axil`** (`rtl/axi2axil.sv`) | **AXI4 → AXI4-Lite** | Burst-to-single-beat bridge, supports FIXED/INCR/WRAP, single outstanding transaction |
+| **`axil2axi`** (`rtl/axil2axi.sv`) | **AXI4-Lite → AXI4** | Single-beat bridge, maps AXI4-Lite to AXI4 len=0 transactions |
 
 ### Module Structure
 
@@ -217,6 +223,8 @@ make waves    # 需要 gtkwave
 │   ├── if_axis.sv              # AXI4-Stream 接口
 │   ├── axi_interconnect.sv     # AXI4 交叉开关互连
 │   ├── axil_interconnect.sv    # AXI4-Lite 交叉开关互连
+│   ├── axi2axil.sv             # AXI4 转 AXI4-Lite 桥接器
+│   ├── axil2axi.sv             # AXI4-Lite 转 AXI4 桥接器
 │   ├── arbiter.sv              # 优先级仲裁器
 │   ├── sync_fifo.v             # 同步 FIFO
 │   ├── async_fifo.v            # 异步 FIFO（双时钟域）
@@ -230,7 +238,9 @@ make waves    # 需要 gtkwave
 │   │   └── sig.hpp             # 信号类型辅助
 │   └── tb/                     # 测试用例
 │       ├── axi_interconnect/   # AXI4 交叉开关测试
-│       └── axil_interconnect/  # AXI4-Lite 交叉开关测试
+│       ├── axil_interconnect/  # AXI4-Lite 交叉开关测试
+│       ├── axi2axil/           # AXI4 转 AXI4-Lite 桥接测试
+│       └── axil2axi/           # AXI4-Lite 转 AXI4 桥接测试
 ├── AGENTS.md
 └── README.md
 ```
@@ -241,6 +251,8 @@ make waves    # 需要 gtkwave
 |------|------|----------|
 | **`axi_interconnect`** (`rtl/axi_interconnect.sv`) | **AXI4** | 主机/从机数量可配置的多路仲裁交叉开关，每端口可选输入/输出 FIFO 缓冲，地址译码路由到对应从机 |
 | **`axil_interconnect`** (`rtl/axil_interconnect.sv`) | **AXI4-Lite** | 主机/从机数量可配置的多路仲裁交叉开关，每端口可选 skid buffer 缓冲，地址译码路由到对应从机 |
+| **`axi2axil`** (`rtl/axi2axil.sv`) | **AXI4 → AXI4-Lite** | 突发转单拍桥接器，支持 FIXED/INCR/WRAP，单笔 outstanding |
+| **`axil2axi`** (`rtl/axil2axi.sv`) | **AXI4-Lite → AXI4** | 单拍桥接器，AXI4-Lite 映射为 AXI4 len=0 事务 |
 
 ### 模块结构
 
