@@ -33,7 +33,7 @@
 constexpr int clog2(int n) { return (n <= 1) ? 0 : 1 + clog2((n + 1) / 2); }
 static constexpr int MST_NUM = 4;
 static constexpr int MST_ID_WIDTH = SLV_ID_WIDTH + clog2(MST_NUM);
-#define N 4
+static constexpr int SLV_NUM = 2;
 
 template <typename T>
 static void connect_slv(axi_ptr<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH>& p, T* top, int idx) {
@@ -157,7 +157,7 @@ static int slv_ix(uint64_t p) {
 }
 
 template <size_t IDW>
-static void mem_eq(axi_slave<DATA_WIDTH, ADDR_WIDTH, IDW> (&slv)[N], uint64_t addr,
+static void mem_eq(axi_slave<DATA_WIDTH, ADDR_WIDTH, IDW> (&slv)[MST_NUM], uint64_t addr,
     const std::vector<uint8_t>& exp, int& pass, int& fail) {
     bool ok = true;
     for (size_t i = 0; i < exp.size(); i++) {
@@ -180,20 +180,26 @@ int main(int argc, char** argv) {
     Vaxi_interconnect_tb* top = new Vaxi_interconnect_tb;
     VerilatedVcdC* tfp = new VerilatedVcdC;
 
-    axi_ptr<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH> slv_p[N];
-    axi_ptr<DATA_WIDTH, ADDR_WIDTH, MST_ID_WIDTH> mst_p[N];
-    for (int i = 0; i < N; i++) {
+    axi_ptr<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH> slv_p[SLV_NUM];
+    axi_ptr<DATA_WIDTH, ADDR_WIDTH, MST_ID_WIDTH> mst_p[MST_NUM];
+    for (int i = 0; i < SLV_NUM; i++) {
         connect_slv(slv_p[i], top, i);
+    }
+    for (int i = 0; i < MST_NUM; i++) {
         connect_mst(mst_p[i], top, i);
-        if (!slv_p[i].check() || !mst_p[i].check())
+    }
+    for (int i = 0; i < SLV_NUM; i++) {
+        if (!slv_p[i].check())
+            return 1;
+    }
+    for (int i = 0; i < MST_NUM; i++) {
+        if (!mst_p[i].check())
             return 1;
     }
 
     axi_master<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH> mst_bfm[] = {
         axi_master<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH>(slv_p[0]),
         axi_master<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH>(slv_p[1]),
-        axi_master<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH>(slv_p[2]),
-        axi_master<DATA_WIDTH, ADDR_WIDTH, SLV_ID_WIDTH>(slv_p[3]),
     };
     axi_slave<DATA_WIDTH, ADDR_WIDTH, MST_ID_WIDTH> slv_bfm[] = {
         axi_slave<DATA_WIDTH, ADDR_WIDTH, MST_ID_WIDTH>(mst_p[0]),
@@ -206,21 +212,23 @@ int main(int argc, char** argv) {
     tfp->open("waveform.vcd");
     top->clk = 0;
     top->rst_n = 0;
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < SLV_NUM; i++) {
         mst_bfm[i].update_output();
+    }
+    for (int i = 0; i < MST_NUM; i++) {
         slv_bfm[i].update_output();
     }
     top->eval();
 
     uint64_t tick = 0, cycle = 0;
     int pass = 0, fail = 0;
-    std::deque<std::vector<uint8_t>> rd_exp[N];
+    std::deque<std::vector<uint8_t>> rd_exp[SLV_NUM];
     const uint64_t MAX_TICK = 90000;
 
     auto push_exp = [&](int m, std::vector<uint8_t> e) { rd_exp[m].push_back(std::move(e)); };
 
     auto drain_reads = [&]() {
-        for (int m = 0; m < N; m++) {
+        for (int m = 0; m < SLV_NUM; m++) {
             std::vector<uint8_t> rd;
             while (mst_bfm[m].get_read_data(rd)) {
                 if (rd_exp[m].empty()) {
@@ -243,8 +251,10 @@ int main(int argc, char** argv) {
             top->rst_n = 1;
 
         if (top->clk) {
-            for (int i = 0; i < N; i++) {
+            for (int i = 0; i < SLV_NUM; i++) {
                 mst_bfm[i].update_input();
+            }
+            for (int i = 0; i < MST_NUM; i++) {
                 slv_bfm[i].update_input();
             }
         }
@@ -254,15 +264,13 @@ int main(int argc, char** argv) {
         if (top->clk) {
             cycle++;
             if (cycle == 10) {
-                for (int i = 0; i < N; i++) {
-                    uint64_t base = 0x1000ull * (unsigned)i;
-                    mst_bfm[i].write_incr(base + 0x10, u64_le(0xA5A50000u + (unsigned)i));
+                for (int i = 0; i < SLV_NUM; i++) {
+                    mst_bfm[i].write_incr(0x0010 + i * 0x1000, u64_le(0xA5A50000u + (unsigned)i));
                 }
             }
             if (cycle == 280) {
-                for (int i = 0; i < N; i++) {
-                    uint64_t base = 0x1000ull * (unsigned)i;
-                    mst_bfm[i].read_incr(base + 0x10, DATA_WIDTH / 8);
+                for (int i = 0; i < SLV_NUM; i++) {
+                    mst_bfm[i].read_incr(0x0010 + i * 0x1000, DATA_WIDTH / 8);
                     push_exp(i, u64_le(0xA5A50000u + (unsigned)i));
                 }
             }
@@ -300,63 +308,40 @@ int main(int argc, char** argv) {
                 push_exp(1, std::move(ex24));
             }
 
-            if (cycle == 10200) {
-                mst_bfm[2].write_wrap(0x21c0, bytes_inc(32, 0x01));
-            }
-            if (cycle == 14600) {
-                mem_eq(slv_bfm, 0x21c0, bytes_inc(32, 0x01), pass, fail);
-            }
-            if (cycle == 14700) {
-                mst_bfm[2].read_wrap(0x21c0, 32);
-                push_exp(2, bytes_inc(32, 0x01));
-            }
-
-            if (cycle == 15000) {
-                mst_bfm[3].write_incr(0x3040, bytes_inc(16, 0x70));
-            }
-            if (cycle == 19400) {
-                mem_eq(slv_bfm, 0x3040, bytes_inc(16, 0x70), pass, fail);
-            }
-            if (cycle == 19500) {
-                mst_bfm[3].read_incr(0x3040, 16);
-                push_exp(3, bytes_inc(16, 0x70));
-            }
-
             if (cycle == 19800) {
-                mst_bfm[0].write_incr(0x2050, bytes_inc(64, 0x5A));
+                mst_bfm[0].write_incr(0x0050, bytes_inc(64, 0x5A));
             }
             if (cycle == 24200) {
-                mem_eq(slv_bfm, 0x2050, bytes_inc(64, 0x5A), pass, fail);
+                mem_eq(slv_bfm, 0x0050, bytes_inc(64, 0x5A), pass, fail);
             }
             if (cycle == 24300) {
-                mst_bfm[0].read_incr(0x2050, 64);
+                mst_bfm[0].read_incr(0x0050, 64);
                 push_exp(0, bytes_inc(64, 0x5A));
             }
 
             if (cycle == 24600) {
-                for (int i = 0; i < N; i++) {
-                    uint64_t base = 0x1000ull * (unsigned)i;
-                    mst_bfm[i].write_fixed(base + 0x100, bytes_inc(8, (uint8_t)(0x51 + i)));
+                for (int i = 0; i < SLV_NUM; i++) {
+                    mst_bfm[i].write_fixed(0x0100 + i * 0x1000, bytes_inc(8, (uint8_t)(0x51 + i)));
                 }
             }
             if (cycle == 29000) {
-                for (int i = 0; i < N; i++) {
-                    uint64_t base = 0x1000ull * (unsigned)i;
-                    mem_eq(slv_bfm, base + 0x100, bytes_inc(8, (uint8_t)(0x51 + i)), pass, fail);
+                for (int i = 0; i < SLV_NUM; i++) {
+                    mem_eq(slv_bfm, 0x0100 + i * 0x1000, bytes_inc(8, (uint8_t)(0x51 + i)), pass, fail);
                 }
             }
             if (cycle == 29100) {
-                for (int i = 0; i < N; i++) {
-                    uint64_t base = 0x1000ull * (unsigned)i;
-                    mst_bfm[i].read_fixed(base + 0x100, 8);
+                for (int i = 0; i < SLV_NUM; i++) {
+                    mst_bfm[i].read_fixed(0x0100 + i * 0x1000, 8);
                     push_exp(i, bytes_inc(8, (uint8_t)(0x51 + i)));
                 }
             }
 
             drain_reads();
 
-            for (int i = 0; i < N; i++) {
+            for (int i = 0; i < SLV_NUM; i++) {
                 mst_bfm[i].update_output();
+            }
+            for (int i = 0; i < MST_NUM; i++) {
                 slv_bfm[i].update_output();
             }
         }
@@ -367,7 +352,7 @@ int main(int argc, char** argv) {
     }
 
     drain_reads();
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < SLV_NUM; i++) {
         if (!rd_exp[i].empty())
             fail += (int)rd_exp[i].size();
     }

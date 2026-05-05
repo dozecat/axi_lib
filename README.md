@@ -59,7 +59,6 @@ make waves    # requires gtkwave
 │   ├── axil2axi.sv             # AXI4-Lite to AXI4 bridge
 │   ├── arbiter.sv              # Priority arbiter
 │   ├── sync_fifo.v             # Synchronous FIFO
-│   ├── async_fifo.v            # Asynchronous FIFO (dual-clock)
 │   └── skid_buffer.v           # Pipeline skid buffer
 ├── sim/
 │   ├── bfm/                    # C++ BFMs
@@ -73,7 +72,6 @@ make waves    # requires gtkwave
 │       ├── axil_interconnect/  # AXI4-Lite crossbar TB
 │       ├── axi2axil/           # AXI4 to AXI4-Lite bridge TB
 │       └── axil2axi/           # AXI4-Lite to AXI4 bridge TB
-├── AGENTS.md
 └── README.md
 ```
 
@@ -155,8 +153,9 @@ axi_slv.update_output();
 
 | Module | Protocol | Description |
 |--------|----------|-------------|
-| **`axi`** (`src/axi/`) | AXI4 | Master/Slave interface supporting FIXED, INCR, WRAP burst |
-| **`axil`** (`src/axil/`) | AXI4-Lite | Master/Slave interface |
+| **`axi`** (`sim/bfm/axi/`) | AXI4 | Master/Slave interface supporting FIXED, INCR, WRAP burst |
+| **`axil`** (`sim/bfm/axil/`) | AXI4-Lite | Master/Slave interface |
+| **`axis`** (`sim/bfm/axis/`) | AXI4-Stream | Master/Slave interface |
 
 See `sim/tb/axi_interconnect/axi_interconnect_tb.cpp` for a complete example.
 
@@ -227,7 +226,6 @@ make waves    # 需要 gtkwave
 │   ├── axil2axi.sv             # AXI4-Lite 转 AXI4 桥接器
 │   ├── arbiter.sv              # 优先级仲裁器
 │   ├── sync_fifo.v             # 同步 FIFO
-│   ├── async_fifo.v            # 异步 FIFO（双时钟域）
 │   └── skid_buffer.v           # 流水线缓冲器
 ├── sim/
 │   ├── bfm/                    # C++ BFM
@@ -241,7 +239,6 @@ make waves    # 需要 gtkwave
 │       ├── axil_interconnect/  # AXI4-Lite 交叉开关测试
 │       ├── axi2axil/           # AXI4 转 AXI4-Lite 桥接测试
 │       └── axil2axi/           # AXI4-Lite 转 AXI4 桥接测试
-├── AGENTS.md
 └── README.md
 ```
 
@@ -323,8 +320,9 @@ axi_slv.update_output();
 
 | 模块 | 协议 | 功能描述 |
 |------|------|----------|
-| **axi**（`src/axi/`） | AXI4 | Master/Slave 接口，支持 FIXED（固定）、INCR（递增）、WRAP（回环）突发 |
-| **axil**（`src/axil/`） | AXI4-Lite | Master/Slave 接口 |
+| **axi**（`sim/bfm/axi/`） | AXI4 | Master/Slave 接口，支持 FIXED（固定）、INCR（递增）、WRAP（回环）突发 |
+| **axil**（`sim/bfm/axil/`） | AXI4-Lite | Master/Slave 接口 |
+| **axis**（`sim/bfm/axis/`） | AXI4-Stream | Master/Slave 接口 |
 
 完整示例请参考 `sim/tb/axi_interconnect/axi_interconnect_tb.cpp`。
 

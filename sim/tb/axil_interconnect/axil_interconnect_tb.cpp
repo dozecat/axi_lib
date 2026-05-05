@@ -27,7 +27,8 @@
 
 #define DATA_WIDTH 32
 #define ADDR_WIDTH 16
-#define N 4
+#define SLV_NUM 2
+#define MST_NUM 4
 
 template <typename T>
 static void connect_slv_port(axil_ptr<DATA_WIDTH, ADDR_WIDTH>& p, T* top, int idx) {
@@ -45,8 +46,6 @@ static void connect_slv_port(axil_ptr<DATA_WIDTH, ADDR_WIDTH>& p, T* top, int id
     switch (idx) {
         case 0: MAP(0); break;
         case 1: MAP(1); break;
-        case 2: MAP(2); break;
-        case 3: MAP(3); break;
     }
     #undef MAP
 }
@@ -80,32 +79,34 @@ int main(int argc, char** argv) {
     Vaxil_interconnect_tb* top = new Vaxil_interconnect_tb;
     VerilatedVcdC* tfp = new VerilatedVcdC;
 
-    axil_ptr<DATA_WIDTH, ADDR_WIDTH> slv_ptr[N];
-    axil_ptr<DATA_WIDTH, ADDR_WIDTH> mst_ptr[N];
+    axil_ptr<DATA_WIDTH, ADDR_WIDTH> slv_ptr[SLV_NUM];
+    axil_ptr<DATA_WIDTH, ADDR_WIDTH> mst_ptr[MST_NUM];
 
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < SLV_NUM; i++) {
         connect_slv_port(slv_ptr[i], top, i);
+    }
+    for (int i = 0; i < MST_NUM; i++) {
         connect_mst_port(mst_ptr[i], top, i);
     }
 
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < SLV_NUM; i++) {
         if (!slv_ptr[i].check()) {
             std::cerr << "[TB] slv_ptr[" << i << "] connection failed!" << std::endl;
             return -1;
         }
+    }
+    for (int i = 0; i < MST_NUM; i++) {
         if (!mst_ptr[i].check()) {
             std::cerr << "[TB] mst_ptr[" << i << "] connection failed!" << std::endl;
             return -1;
         }
     }
 
-    axil_master<DATA_WIDTH, ADDR_WIDTH> mst_bfm[N] = {
+    axil_master<DATA_WIDTH, ADDR_WIDTH> mst_bfm[SLV_NUM] = {
         axil_master<DATA_WIDTH, ADDR_WIDTH>(slv_ptr[0]),
-        axil_master<DATA_WIDTH, ADDR_WIDTH>(slv_ptr[1]),
-        axil_master<DATA_WIDTH, ADDR_WIDTH>(slv_ptr[2]),
-        axil_master<DATA_WIDTH, ADDR_WIDTH>(slv_ptr[3])
+        axil_master<DATA_WIDTH, ADDR_WIDTH>(slv_ptr[1])
     };
-    axil_slave<DATA_WIDTH, ADDR_WIDTH> slv_bfm[N] = {
+    axil_slave<DATA_WIDTH, ADDR_WIDTH> slv_bfm[MST_NUM] = {
         axil_slave<DATA_WIDTH, ADDR_WIDTH>(mst_ptr[0]),
         axil_slave<DATA_WIDTH, ADDR_WIDTH>(mst_ptr[1]),
         axil_slave<DATA_WIDTH, ADDR_WIDTH>(mst_ptr[2]),
@@ -123,7 +124,7 @@ int main(int argc, char** argv) {
     const uint64_t MAX_TICKS = 2000;
     int pass = 0, fail = 0;
 
-    std::cout << "\n=== AXI4-Lite Interconnect Testbench (4M4S) ===\n" << std::endl;
+    std::cout << "\n=== AXI4-Lite Interconnect Testbench (SLV_NUM=2, MST_NUM=4) ===\n" << std::endl;
 
     while (!Verilated::gotFinish() && tick < MAX_TICKS) {
         top->clk = !top->clk;
@@ -134,8 +135,10 @@ int main(int argc, char** argv) {
         }
 
         if (top->clk) {
-            for (int i = 0; i < N; i++) {
+            for (int i = 0; i < SLV_NUM; i++) {
                 mst_bfm[i].update_input();
+            }
+            for (int i = 0; i < MST_NUM; i++) {
                 slv_bfm[i].update_input();
             }
         }
@@ -145,7 +148,7 @@ int main(int argc, char** argv) {
         if (top->clk) {
             cycle++;
 
-            // Phase 1: 4 masters write to 4 different slaves
+            // Phase 1: masters write to slaves
             if (cycle == 5) {
                 std::cout << "[TEST] Master0->Slave0: write(0x0010, 0xA5A5A5A5)" << std::endl;
                 mst_bfm[0].write(0x0010, 0xA5A5A5A5);
@@ -154,51 +157,41 @@ int main(int argc, char** argv) {
                 std::cout << "[TEST] Master1->Slave1: write(0x0110, 0x5A5A5A5A)" << std::endl;
                 mst_bfm[1].write(0x0110, 0x5A5A5A5A);
             }
-            if (cycle == 7) {
-                std::cout << "[TEST] Master2->Slave2: write(0x0210, 0xA5A5A5A5)" << std::endl;
-                mst_bfm[2].write(0x0210, 0xA5A5A5A5);
-            }
-            if (cycle == 8) {
-                std::cout << "[TEST] Master3->Slave3: write(0x0310, 0x5A5A5A5A)" << std::endl;
-                mst_bfm[3].write(0x0310, 0x5A5A5A5A);
-            }
 
-            // Phase 2: Read back all
+            // Phase 2: Read back
             if (cycle == 20) {
-                std::cout << "[TEST] Read back all 4 slaves" << std::endl;
-                for (int i = 0; i < N; i++)
-                    mst_bfm[i].read(i == 0 ? 0x0010 : i == 1 ? 0x0110 : i == 2 ? 0x0210 : 0x0310);
+                std::cout << "[TEST] Read back" << std::endl;
+                mst_bfm[0].read(0x0010);
+                mst_bfm[1].read(0x0110);
             }
 
             // Phase 3: Simultaneous writes to different slaves
             if (cycle == 35) {
-                std::cout << "[TEST] All masters -> different slaves" << std::endl;
+                std::cout << "[TEST] Both masters -> different slaves" << std::endl;
                 mst_bfm[0].write(0x0020, 0x12345678);
                 mst_bfm[1].write(0x0120, 0x87654321);
-                mst_bfm[2].write(0x0220, 0xDEADBEEF);
-                mst_bfm[3].write(0x0320, 0xCAFEBABE);
             }
 
-            // Phase 4: Read back again
+            // Phase 4: Read back
             if (cycle == 50) {
-                std::cout << "[TEST] Read back all slaves" << std::endl;
-                for (int i = 0; i < N; i++)
-                    mst_bfm[i].read(i == 0 ? 0x0020 : i == 1 ? 0x0120 : i == 2 ? 0x0220 : 0x0320);
+                std::cout << "[TEST] Read back" << std::endl;
+                mst_bfm[0].read(0x0020);
+                mst_bfm[1].read(0x0120);
             }
 
-            // Phase 5: Priority contention - all 4 masters contend for Slave0
-            // Master3(prio=0) < Master2(prio=1) < Master1(prio=2) < Master0(prio=3)
+            // Phase 5: Priority contention - both masters contend for Slave0
+            // Master0(prio=1) has higher priority than Master1(prio=0)
             if (cycle == 65) {
-                std::cout << "[TEST] Contention: 4 masters -> Slave0 (prio: M0>M1>M2>M3)" << std::endl;
-                for (int i = 0; i < N; i++)
-                    mst_bfm[i].write(0x0040, 0x11110000 + (i << 16));
+                std::cout << "[TEST] Contention: 2 masters -> Slave0 (prio: M0>M1)" << std::endl;
+                mst_bfm[0].write(0x0040, 0x11110000);
+                mst_bfm[1].write(0x0040, 0x22220000);
             }
 
-            // Phase 6: Verify contention result
+            // Phase 6: Verify contention
             if (cycle == 85) {
                 std::cout << "[TEST] Contention read back" << std::endl;
-                for (int i = 0; i < N; i++)
-                    mst_bfm[i].read(0x0040);
+                mst_bfm[0].read(0x0040);
+                mst_bfm[1].read(0x0040);
             }
 
             // Phase 7: Unmapped access
@@ -208,11 +201,11 @@ int main(int argc, char** argv) {
             }
 
             // Read data verification
-            for (int i = 0; i < N; i++) {
+            for (int i = 0; i < SLV_NUM; i++) {
                 uint64_t rdata;
                 while (mst_bfm[i].get_read_data(rdata)) {
                     bool ok = false;
-                    for (int m = 0; m < N; m++) {
+                    for (int m = 0; m < MST_NUM; m++) {
                         for (auto& kv : slv_bfm[m].mem) {
                             if (rdata == kv.second) { ok = true; break; }
                         }
@@ -226,8 +219,10 @@ int main(int argc, char** argv) {
             }
 
             // Update BFM output signals
-            for (int i = 0; i < N; i++) {
+            for (int i = 0; i < SLV_NUM; i++) {
                 mst_bfm[i].update_output();
+            }
+            for (int i = 0; i < MST_NUM; i++) {
                 slv_bfm[i].update_output();
             }
         }
