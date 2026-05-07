@@ -20,16 +20,16 @@
 `default_nettype none
 
 module axil2axi (
-   input  wire                aclk,
-   input  wire                aresetn,
+   input  wire                clk,
+   input  wire                rst,
 
-   if_axil.slave              axil_slv_if,
-   if_axi.master              axi_mst_if
+   if_axil.slave              s_axil_if,
+   if_axi.master              m_axi_if
 );
 
-localparam ADDR_WIDTH  = axil_slv_if.ADDR_WIDTH;
-localparam DATA_WIDTH  = axil_slv_if.DATA_WIDTH;
-localparam ID_WIDTH    = axi_mst_if.ID_WIDTH;
+localparam ADDR_WIDTH  = s_axil_if.ADDR_WIDTH;
+localparam DATA_WIDTH  = s_axil_if.DATA_WIDTH;
+localparam ID_WIDTH    = m_axi_if.ID_WIDTH;
 localparam STRB_WIDTH  = DATA_WIDTH / 8;
 
 localparam LEN_WIDTH   = 8;
@@ -44,12 +44,12 @@ localparam SIZE_VAL = $clog2(STRB_WIDTH);
 initial begin
    if (DATA_WIDTH != 32 && DATA_WIDTH != 64)
       $error("axil2axi: DATA_WIDTH must be 32 or 64, got %0d", DATA_WIDTH);
-   if (axil_slv_if.ADDR_WIDTH != axi_mst_if.ADDR_WIDTH)
+   if (s_axil_if.ADDR_WIDTH != m_axi_if.ADDR_WIDTH)
       $error("axil2axi: ADDR_WIDTH mismatch (%0d vs %0d)",
-             axil_slv_if.ADDR_WIDTH, axi_mst_if.ADDR_WIDTH);
-   if (axil_slv_if.DATA_WIDTH != axi_mst_if.DATA_WIDTH)
+             s_axil_if.ADDR_WIDTH, m_axi_if.ADDR_WIDTH);
+   if (s_axil_if.DATA_WIDTH != m_axi_if.DATA_WIDTH)
       $error("axil2axi: DATA_WIDTH mismatch (%0d vs %0d)",
-             axil_slv_if.DATA_WIDTH, axi_mst_if.DATA_WIDTH);
+             s_axil_if.DATA_WIDTH, m_axi_if.DATA_WIDTH);
 end
 
 //*****************************************************************************
@@ -71,8 +71,8 @@ enum logic [1:0] {
 } w_state, w_nstate;
 
 // state register
-always_ff @(posedge aclk or negedge aresetn) begin
-   if (!aresetn)
+always_ff @(posedge clk or posedge rst) begin
+   if (rst)
       w_state <= W_IDLE;
    else
       w_state <= w_nstate;
@@ -84,9 +84,9 @@ always_comb begin
    case (w_state)
       W_IDLE:
       begin
-         if (axil_slv_if.awvalid && axil_slv_if.wvalid)
+         if (s_axil_if.awvalid && s_axil_if.wvalid)
             w_nstate = W_ISSUE;
-         else if (axil_slv_if.awvalid)
+         else if (s_axil_if.awvalid)
             w_nstate = W_WAIT;
          else
             w_nstate = W_IDLE;
@@ -94,7 +94,7 @@ always_comb begin
 
       W_WAIT:
       begin
-         if (axil_slv_if.wvalid)
+         if (s_axil_if.wvalid)
             w_nstate = W_ISSUE;
          else
             w_nstate = W_WAIT;
@@ -102,7 +102,7 @@ always_comb begin
 
       W_ISSUE:
       begin
-         if (axi_mst_if.awready && axi_mst_if.wready)
+         if (m_axi_if.awready && m_axi_if.wready)
             w_nstate = W_BRESP;
          else
             w_nstate = W_ISSUE;
@@ -110,7 +110,7 @@ always_comb begin
 
       W_BRESP:
       begin
-         if (axi_mst_if.bvalid)
+         if (m_axi_if.bvalid)
             w_nstate = W_IDLE;
          else
             w_nstate = W_BRESP;
@@ -119,60 +119,60 @@ always_comb begin
 end
 
 // data registers
-always_ff @(posedge aclk or negedge aresetn) begin
-   if (!aresetn) begin
+always_ff @(posedge clk or posedge rst) begin
+   if (rst) begin
       w_addr <= '0;
       w_prot <= '0;
-   end else if (w_state == W_IDLE && axil_slv_if.awvalid) begin
-      w_addr <= axil_slv_if.awaddr;
-      w_prot <= axil_slv_if.awprot;
+   end else if (w_state == W_IDLE && s_axil_if.awvalid) begin
+      w_addr <= s_axil_if.awaddr;
+      w_prot <= s_axil_if.awprot;
    end
 end
 
-always_ff @(posedge aclk or negedge aresetn) begin
-   if (!aresetn) begin
+always_ff @(posedge clk or posedge rst) begin
+   if (rst) begin
       w_data <= '0;
       w_strb <= '0;
-   end else if ((w_state == W_IDLE && axil_slv_if.wvalid) ||
-                (w_state == W_WAIT && axil_slv_if.wvalid)) begin
-      w_data <= axil_slv_if.wdata;
-      w_strb <= axil_slv_if.wstrb;
+   end else if ((w_state == W_IDLE && s_axil_if.wvalid) ||
+                (w_state == W_WAIT && s_axil_if.wvalid)) begin
+      w_data <= s_axil_if.wdata;
+      w_strb <= s_axil_if.wstrb;
    end
 end
 
-always_ff @(posedge aclk or negedge aresetn) begin
-   if (!aresetn)
+always_ff @(posedge clk or posedge rst) begin
+   if (rst)
       w_resp <= 2'b00;
-   else if (w_state == W_BRESP && axi_mst_if.bvalid)
-      w_resp <= axi_mst_if.bresp;
+   else if (w_state == W_BRESP && m_axi_if.bvalid)
+      w_resp <= m_axi_if.bresp;
 end
 
 // axi-lite slave interface assigns
-assign axil_slv_if.awready = (w_state == W_IDLE);
-assign axil_slv_if.wready  = (w_state == W_IDLE) || (w_state == W_WAIT);
-assign axil_slv_if.bvalid  = (w_state == W_BRESP) && axi_mst_if.bvalid;
-assign axil_slv_if.bresp   = (w_state == W_BRESP) ? axi_mst_if.bresp : 2'b00;
+assign s_axil_if.awready = (w_state == W_IDLE);
+assign s_axil_if.wready  = (w_state == W_IDLE) || (w_state == W_WAIT);
+assign s_axil_if.bvalid  = (w_state == W_BRESP) && m_axi_if.bvalid;
+assign s_axil_if.bresp   = (w_state == W_BRESP) ? m_axi_if.bresp : 2'b00;
 
 // axi master interface assigns
-assign axi_mst_if.awaddr   = w_addr;
-assign axi_mst_if.awprot   = w_prot;
-assign axi_mst_if.awvalid  = (w_state == W_ISSUE);
-assign axi_mst_if.awlen    = 8'd0;
-assign axi_mst_if.awsize   = SIZE_VAL;
-assign axi_mst_if.awburst  = 2'b00;  // FIXED
-assign axi_mst_if.awcache  = 4'd0;
-assign axi_mst_if.awlock   = 1'b0;
-assign axi_mst_if.awqos    = 4'd0;
-assign axi_mst_if.awregion = 4'd0;
-assign axi_mst_if.awid     = {ID_WIDTH{1'b0}};
+assign m_axi_if.awaddr   = w_addr;
+assign m_axi_if.awprot   = w_prot;
+assign m_axi_if.awvalid  = (w_state == W_ISSUE);
+assign m_axi_if.awlen    = 8'd0;
+assign m_axi_if.awsize   = SIZE_VAL;
+assign m_axi_if.awburst  = 2'b00;  // FIXED
+assign m_axi_if.awcache  = 4'd0;
+assign m_axi_if.awlock   = 1'b0;
+assign m_axi_if.awqos    = 4'd0;
+assign m_axi_if.awregion = 4'd0;
+assign m_axi_if.awid     = {ID_WIDTH{1'b0}};
 
-assign axi_mst_if.wdata    = w_data;
-assign axi_mst_if.wstrb    = w_strb;
-assign axi_mst_if.wvalid   = (w_state == W_ISSUE);
-assign axi_mst_if.wlast    = 1'b1;
-assign axi_mst_if.wid      = {ID_WIDTH{1'b0}};
+assign m_axi_if.wdata    = w_data;
+assign m_axi_if.wstrb    = w_strb;
+assign m_axi_if.wvalid   = (w_state == W_ISSUE);
+assign m_axi_if.wlast    = 1'b1;
+assign m_axi_if.wid      = {ID_WIDTH{1'b0}};
 
-assign axi_mst_if.bready   = (w_state == W_BRESP);
+assign m_axi_if.bready   = (w_state == W_BRESP);
 
 //*****************************************************************************
 // Read channel
@@ -193,8 +193,8 @@ enum logic [1:0] {
 } r_state, r_nstate;
 
 // state register
-always_ff @(posedge aclk or negedge aresetn) begin
-   if (!aresetn)
+always_ff @(posedge clk or posedge rst) begin
+   if (rst)
       r_state <= R_IDLE;
    else
       r_state <= r_nstate;
@@ -206,7 +206,7 @@ always_comb begin
    case (r_state)
       R_IDLE:
       begin
-         if (axil_slv_if.arvalid)
+         if (s_axil_if.arvalid)
             r_nstate = R_ISSUE;
          else
             r_nstate = R_IDLE;
@@ -214,7 +214,7 @@ always_comb begin
 
       R_ISSUE:
       begin
-         if (axi_mst_if.arready)
+         if (m_axi_if.arready)
             r_nstate = R_WAIT;
          else
             r_nstate = R_ISSUE;
@@ -222,7 +222,7 @@ always_comb begin
 
       R_WAIT:
       begin
-         if (axi_mst_if.rvalid)
+         if (m_axi_if.rvalid)
             r_nstate = R_PRESENT;
          else
             r_nstate = R_WAIT;
@@ -230,7 +230,7 @@ always_comb begin
 
       R_PRESENT:
       begin
-         if (axil_slv_if.rready && r_dvalid)
+         if (s_axil_if.rready && r_dvalid)
             r_nstate = R_IDLE;
          else
             r_nstate = R_PRESENT;
@@ -239,50 +239,50 @@ always_comb begin
 end
 
 // data registers
-always_ff @(posedge aclk or negedge aresetn) begin
-   if (!aresetn) begin
+always_ff @(posedge clk or posedge rst) begin
+   if (rst) begin
       r_addr <= '0;
       r_prot <= '0;
-   end else if (r_state == R_IDLE && axil_slv_if.arvalid) begin
-      r_addr <= axil_slv_if.araddr;
-      r_prot <= axil_slv_if.arprot;
+   end else if (r_state == R_IDLE && s_axil_if.arvalid) begin
+      r_addr <= s_axil_if.araddr;
+      r_prot <= s_axil_if.arprot;
    end
 end
 
-always_ff @(posedge aclk or negedge aresetn) begin
-   if (!aresetn) begin
+always_ff @(posedge clk or posedge rst) begin
+   if (rst) begin
       r_data  <= '0;
       r_resp  <= 2'b00;
       r_dvalid <= 1'b0;
-   end else if (r_state == R_WAIT && axi_mst_if.rvalid) begin
-      r_data   <= axi_mst_if.rdata;
-      r_resp   <= axi_mst_if.rresp;
+   end else if (r_state == R_WAIT && m_axi_if.rvalid) begin
+      r_data   <= m_axi_if.rdata;
+      r_resp   <= m_axi_if.rresp;
       r_dvalid <= 1'b1;
-   end else if (r_state == R_PRESENT && axil_slv_if.rready && r_dvalid) begin
+   end else if (r_state == R_PRESENT && s_axil_if.rready && r_dvalid) begin
       r_dvalid <= 1'b0;
    end
 end
 
 // axi-lite slave interface assigns
-assign axil_slv_if.arready = (r_state == R_IDLE);
-assign axil_slv_if.rvalid  = r_dvalid;
-assign axil_slv_if.rdata   = r_data;
-assign axil_slv_if.rresp   = r_resp;
+assign s_axil_if.arready = (r_state == R_IDLE);
+assign s_axil_if.rvalid  = r_dvalid;
+assign s_axil_if.rdata   = r_data;
+assign s_axil_if.rresp   = r_resp;
 
 // axi master interface assigns
-assign axi_mst_if.araddr   = r_addr;
-assign axi_mst_if.arprot   = r_prot;
-assign axi_mst_if.arvalid  = (r_state == R_ISSUE);
-assign axi_mst_if.arlen    = 8'd0;
-assign axi_mst_if.arsize   = SIZE_VAL;
-assign axi_mst_if.arburst  = 2'b00;  // FIXED
-assign axi_mst_if.arcache  = 4'd0;
-assign axi_mst_if.arlock   = 1'b0;
-assign axi_mst_if.arqos    = 4'd0;
-assign axi_mst_if.arregion = 4'd0;
-assign axi_mst_if.arid     = {ID_WIDTH{1'b0}};
+assign m_axi_if.araddr   = r_addr;
+assign m_axi_if.arprot   = r_prot;
+assign m_axi_if.arvalid  = (r_state == R_ISSUE);
+assign m_axi_if.arlen    = 8'd0;
+assign m_axi_if.arsize   = SIZE_VAL;
+assign m_axi_if.arburst  = 2'b00;  // FIXED
+assign m_axi_if.arcache  = 4'd0;
+assign m_axi_if.arlock   = 1'b0;
+assign m_axi_if.arqos    = 4'd0;
+assign m_axi_if.arregion = 4'd0;
+assign m_axi_if.arid     = {ID_WIDTH{1'b0}};
 
-assign axi_mst_if.rready   = (r_state == R_WAIT);
+assign m_axi_if.rready   = (r_state == R_WAIT);
 
 endmodule
 

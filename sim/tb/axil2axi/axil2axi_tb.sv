@@ -8,143 +8,143 @@ module axil2axi_tb
    parameter STRB_WIDTH    = DATA_WIDTH / 8
 )(
    input  wire                    clk,
-   input  wire                    rst_n,
+   input  wire                    rst,
 
    // AXI4-Lite master port (to bridge slave side)
-   input  wire                    m_awvalid,
-   output logic                   m_awready,
-   input  wire  [ADDR_WIDTH-1:0]  m_awaddr,
-   input  wire  [2:0]             m_awprot,
-   input  wire                    m_wvalid,
-   output logic                   m_wready,
-   input  wire  [DATA_WIDTH-1:0]  m_wdata,
-   input  wire  [STRB_WIDTH-1:0]  m_wstrb,
-   output logic                   m_bvalid,
-   input  wire                    m_bready,
-   output logic [1:0]             m_bresp,
-   input  wire                    m_arvalid,
-   output logic                   m_arready,
-   input  wire  [ADDR_WIDTH-1:0]  m_araddr,
-   input  wire  [2:0]             m_arprot,
-   output logic                   m_rvalid,
-   input  wire                    m_rready,
-   output logic [DATA_WIDTH-1:0]  m_rdata,
-   output logic [1:0]             m_rresp,
+   input  wire                    s_awvalid,
+   output logic                   s_awready,
+   input  wire  [ADDR_WIDTH-1:0]  s_awaddr,
+   input  wire  [2:0]             s_awprot,
+   input  wire                    s_wvalid,
+   output logic                   s_wready,
+   input  wire  [DATA_WIDTH-1:0]  s_wdata,
+   input  wire  [STRB_WIDTH-1:0]  s_wstrb,
+   output logic                   s_bvalid,
+   input  wire                    s_bready,
+   output logic [1:0]             s_bresp,
+   input  wire                    s_arvalid,
+   output logic                   s_arready,
+   input  wire  [ADDR_WIDTH-1:0]  s_araddr,
+   input  wire  [2:0]             s_arprot,
+   output logic                   s_rvalid,
+   input  wire                    s_rready,
+   output logic [DATA_WIDTH-1:0]  s_rdata,
+   output logic [1:0]             s_rresp,
 
    // AXI4 slave port (to bridge master side)
-   output logic                   s_awvalid,
-   input  wire                    s_awready,
-   output logic [ADDR_WIDTH-1:0]  s_awaddr,
-   output logic [1:0]             s_awburst,
-   output logic [3:0]             s_awcache,
-   output logic [ID_WIDTH-1:0]    s_awid,
-   output logic [7:0]             s_awlen,
-   output logic                   s_awlock,
-   output logic [2:0]             s_awprot,
-   output logic [3:0]             s_awqos,
-   output logic [3:0]             s_awregion,
-   output logic [2:0]             s_awsize,
-   output logic                   s_wvalid,
-   input  wire                    s_wready,
-   output logic [DATA_WIDTH-1:0]  s_wdata,
-   output logic [ID_WIDTH-1:0]    s_wid,
-   output logic                   s_wlast,
-   output logic [STRB_WIDTH-1:0]  s_wstrb,
-   input  wire                    s_bvalid,
-   output logic                   s_bready,
-   input  wire  [1:0]             s_bresp,
-   input  wire  [ID_WIDTH-1:0]    s_bid,
-   output logic                   s_arvalid,
-   input  wire                    s_arready,
-   output logic [ADDR_WIDTH-1:0]  s_araddr,
-   output logic [1:0]             s_arburst,
-   output logic [3:0]             s_arcache,
-   output logic [ID_WIDTH-1:0]    s_arid,
-   output logic [7:0]             s_arlen,
-   output logic                   s_arlock,
-   output logic [2:0]             s_arprot,
-   output logic [3:0]             s_arqos,
-   output logic [3:0]             s_arregion,
-   output logic [2:0]             s_arsize,
-   input  wire                    s_rvalid,
-   output logic                   s_rready,
-   input  wire  [DATA_WIDTH-1:0]  s_rdata,
-   input  wire  [1:0]             s_rresp,
-   input  wire  [ID_WIDTH-1:0]    s_rid,
-   input  wire                    s_rlast
+   output logic                   m_awvalid,
+   input  wire                    m_awready,
+   output logic [ADDR_WIDTH-1:0]  m_awaddr,
+   output logic [1:0]             m_awburst,
+   output logic [3:0]             m_awcache,
+   output logic [ID_WIDTH-1:0]    m_awid,
+   output logic [7:0]             m_awlen,
+   output logic                   m_awlock,
+   output logic [2:0]             m_awprot,
+   output logic [3:0]             m_awqos,
+   output logic [3:0]             m_awregion,
+   output logic [2:0]             m_awsize,
+   output logic                   m_wvalid,
+   input  wire                    m_wready,
+   output logic [DATA_WIDTH-1:0]  m_wdata,
+   output logic [ID_WIDTH-1:0]    m_wid,
+   output logic                   m_wlast,
+   output logic [STRB_WIDTH-1:0]  m_wstrb,
+   input  wire                    m_bvalid,
+   output logic                   m_bready,
+   input  wire  [1:0]             m_bresp,
+   input  wire  [ID_WIDTH-1:0]    m_bid,
+   output logic                   m_arvalid,
+   input  wire                    m_arready,
+   output logic [ADDR_WIDTH-1:0]  m_araddr,
+   output logic [1:0]             m_arburst,
+   output logic [3:0]             m_arcache,
+   output logic [ID_WIDTH-1:0]    m_arid,
+   output logic [7:0]             m_arlen,
+   output logic                   m_arlock,
+   output logic [2:0]             m_arprot,
+   output logic [3:0]             m_arqos,
+   output logic [3:0]             m_arregion,
+   output logic [2:0]             m_arsize,
+   input  wire                    m_rvalid,
+   output logic                   m_rready,
+   input  wire  [DATA_WIDTH-1:0]  m_rdata,
+   input  wire  [1:0]             m_rresp,
+   input  wire  [ID_WIDTH-1:0]    m_rid,
+   input  wire                    m_rlast
 );
 
-if_axil #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) axil_slv_if ();
-if_axi  #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH), .ID_WIDTH(ID_WIDTH)) axi_mst_if ();
+if_axil #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) s_axil_if ();
+if_axi  #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH), .ID_WIDTH(ID_WIDTH)) m_axi_if ();
 
-// AXI4-Lite master → axil_slv_if
-assign axil_slv_if.awaddr  = m_awaddr;
-assign axil_slv_if.awprot  = m_awprot;
-assign axil_slv_if.awvalid = m_awvalid;
-assign axil_slv_if.wdata   = m_wdata;
-assign axil_slv_if.wstrb   = m_wstrb;
-assign axil_slv_if.wvalid  = m_wvalid;
-assign axil_slv_if.araddr  = m_araddr;
-assign axil_slv_if.arprot  = m_arprot;
-assign axil_slv_if.arvalid = m_arvalid;
-assign axil_slv_if.bready  = m_bready;
-assign axil_slv_if.rready  = m_rready;
-assign m_awready = axil_slv_if.awready;
-assign m_wready  = axil_slv_if.wready;
-assign m_bvalid  = axil_slv_if.bvalid;
-assign m_bresp   = axil_slv_if.bresp;
-assign m_arready = axil_slv_if.arready;
-assign m_rvalid  = axil_slv_if.rvalid;
-assign m_rdata   = axil_slv_if.rdata;
-assign m_rresp   = axil_slv_if.rresp;
+// AXI4-Lite master → s_axil_if
+assign s_axil_if.awaddr  = s_awaddr;
+assign s_axil_if.awprot  = s_awprot;
+assign s_axil_if.awvalid = s_awvalid;
+assign s_axil_if.wdata   = s_wdata;
+assign s_axil_if.wstrb   = s_wstrb;
+assign s_axil_if.wvalid  = s_wvalid;
+assign s_axil_if.araddr  = s_araddr;
+assign s_axil_if.arprot  = s_arprot;
+assign s_axil_if.arvalid = s_arvalid;
+assign s_axil_if.bready  = s_bready;
+assign s_axil_if.rready  = s_rready;
+assign s_awready = s_axil_if.awready;
+assign s_wready  = s_axil_if.wready;
+assign s_bvalid  = s_axil_if.bvalid;
+assign s_bresp   = s_axil_if.bresp;
+assign s_arready = s_axil_if.arready;
+assign s_rvalid  = s_axil_if.rvalid;
+assign s_rdata   = s_axil_if.rdata;
+assign s_rresp   = s_axil_if.rresp;
 
-// axi_mst_if → AXI4 slave port
-assign s_awaddr    = axi_mst_if.awaddr;
-assign s_awburst   = axi_mst_if.awburst;
-assign s_awcache   = axi_mst_if.awcache;
-assign s_awid      = axi_mst_if.awid;
-assign s_awlen     = axi_mst_if.awlen;
-assign s_awlock    = axi_mst_if.awlock;
-assign s_awprot    = axi_mst_if.awprot;
-assign s_awqos     = axi_mst_if.awqos;
-assign s_awregion  = axi_mst_if.awregion;
-assign s_awsize    = axi_mst_if.awsize;
-assign s_awvalid   = axi_mst_if.awvalid;
-assign s_wdata     = axi_mst_if.wdata;
-assign s_wid       = axi_mst_if.wid;
-assign s_wlast     = axi_mst_if.wlast;
-assign s_wstrb     = axi_mst_if.wstrb;
-assign s_wvalid    = axi_mst_if.wvalid;
-assign s_bready    = axi_mst_if.bready;
-assign s_araddr    = axi_mst_if.araddr;
-assign s_arburst   = axi_mst_if.arburst;
-assign s_arcache   = axi_mst_if.arcache;
-assign s_arid      = axi_mst_if.arid;
-assign s_arlen     = axi_mst_if.arlen;
-assign s_arlock    = axi_mst_if.arlock;
-assign s_arprot    = axi_mst_if.arprot;
-assign s_arqos     = axi_mst_if.arqos;
-assign s_arregion  = axi_mst_if.arregion;
-assign s_arsize    = axi_mst_if.arsize;
-assign s_arvalid   = axi_mst_if.arvalid;
-assign s_rready    = axi_mst_if.rready;
-assign axi_mst_if.awready = s_awready;
-assign axi_mst_if.wready  = s_wready;
-assign axi_mst_if.bvalid  = s_bvalid;
-assign axi_mst_if.bresp   = s_bresp;
-assign axi_mst_if.bid     = s_bid;
-assign axi_mst_if.arready = s_arready;
-assign axi_mst_if.rvalid  = s_rvalid;
-assign axi_mst_if.rdata   = s_rdata;
-assign axi_mst_if.rresp   = s_rresp;
-assign axi_mst_if.rid     = s_rid;
-assign axi_mst_if.rlast   = s_rlast;
+// m_axi_if → AXI4 slave port
+assign m_awaddr    = m_axi_if.awaddr;
+assign m_awburst   = m_axi_if.awburst;
+assign m_awcache   = m_axi_if.awcache;
+assign m_awid      = m_axi_if.awid;
+assign m_awlen     = m_axi_if.awlen;
+assign m_awlock    = m_axi_if.awlock;
+assign m_awprot    = m_axi_if.awprot;
+assign m_awqos     = m_axi_if.awqos;
+assign m_awregion  = m_axi_if.awregion;
+assign m_awsize    = m_axi_if.awsize;
+assign m_awvalid   = m_axi_if.awvalid;
+assign m_wdata     = m_axi_if.wdata;
+assign m_wid       = m_axi_if.wid;
+assign m_wlast     = m_axi_if.wlast;
+assign m_wstrb     = m_axi_if.wstrb;
+assign m_wvalid    = m_axi_if.wvalid;
+assign m_bready    = m_axi_if.bready;
+assign m_araddr    = m_axi_if.araddr;
+assign m_arburst   = m_axi_if.arburst;
+assign m_arcache   = m_axi_if.arcache;
+assign m_arid      = m_axi_if.arid;
+assign m_arlen     = m_axi_if.arlen;
+assign m_arlock    = m_axi_if.arlock;
+assign m_arprot    = m_axi_if.arprot;
+assign m_arqos     = m_axi_if.arqos;
+assign m_arregion  = m_axi_if.arregion;
+assign m_arsize    = m_axi_if.arsize;
+assign m_arvalid   = m_axi_if.arvalid;
+assign m_rready    = m_axi_if.rready;
+assign m_axi_if.awready = m_awready;
+assign m_axi_if.wready  = m_wready;
+assign m_axi_if.bvalid  = m_bvalid;
+assign m_axi_if.bresp   = m_bresp;
+assign m_axi_if.bid     = m_bid;
+assign m_axi_if.arready = m_arready;
+assign m_axi_if.rvalid  = m_rvalid;
+assign m_axi_if.rdata   = m_rdata;
+assign m_axi_if.rresp   = m_rresp;
+assign m_axi_if.rid     = m_rid;
+assign m_axi_if.rlast   = m_rlast;
 
 axil2axi dut (
-   .aclk        ( clk    ),
-   .aresetn     ( rst_n  ),
-   .axil_slv_if ( axil_slv_if ),
-   .axi_mst_if  ( axi_mst_if )
+   .clk         ( clk    ),
+   .rst         ( rst    ),
+   .s_axil_if   ( s_axil_if ),
+   .m_axi_if    ( m_axi_if )
 );
 
 endmodule

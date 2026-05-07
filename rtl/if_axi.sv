@@ -29,7 +29,7 @@ localparam LOCK_WIDTH         = 1;            // Lock type width
 localparam PROT_WIDTH         = 3;            // Protection type width
 localparam QOS_WIDTH          = 4;            // QoS width
 localparam REGION_WIDTH       = 4;            // Region width
-localparam SIZE_WIDTH         = 3;            // Burst size width
+localparam BURST_SIZE_WIDTH   = 3;            // Burst size width
 localparam RESP_WIDTH         = 2;            // Response type width
 
 // Read Address Channel
@@ -43,7 +43,7 @@ logic [PROT_WIDTH-1:0]        arprot;
 logic [QOS_WIDTH-1:0]         arqos;
 logic                         arready;
 logic [REGION_WIDTH-1:0]      arregion;
-logic [SIZE_WIDTH-1:0]        arsize;
+logic [BURST_SIZE_WIDTH-1:0]  arsize;
 logic                         arvalid;
 
 // Write Address Channel
@@ -57,7 +57,7 @@ logic [PROT_WIDTH-1:0]        awprot;
 logic [QOS_WIDTH-1:0]         awqos;
 logic                         awready;
 logic [REGION_WIDTH-1:0]      awregion;
-logic [SIZE_WIDTH-1:0]        awsize;
+logic [BURST_SIZE_WIDTH-1:0]  awsize;
 logic                         awvalid;
 
 // Write Response Channel

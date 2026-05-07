@@ -6,10 +6,6 @@
  * @brief       AXI4-to-AXI4-Lite Bridge Testbench (C++)
  * @see         https://github.com/dozecat/axi_lib
  *
- * @details     Verilator C++ TB for axi2axil bridge.
- *              VIP: `src/axi/axi_ptr.hpp`, `src/axi/axi.hpp` and `src/axil/axil_ptr.hpp`, `src/axil/axil.hpp`
- *              (include dirs from `tb/axi2axil/Makefile`).
- *
  * Modification History:
  * Ver   Who  Date        Changes
  * ----  ---- ----------  -----------------------------------------------------
@@ -37,43 +33,43 @@
 void bridge_connect(axi_ptr<DATA_WIDTH, ADDR_WIDTH, ID_WIDTH>& axi_prt,
                     axil_ptr<DATA_WIDTH, ADDR_WIDTH>& axil_prt,
                     Vaxi2axil_tb* top) {
-    // AXI Master (Input to DUT)
-    axi_prt.awid     = &(top->m_awid);     axi_prt.awaddr   = &(top->m_awaddr);
-    axi_prt.awlen    = &(top->m_awlen);    axi_prt.awsize   = &(top->m_awsize);
-    axi_prt.awburst  = &(top->m_awburst);  axi_prt.awcache  = &(top->m_awcache);
-    axi_prt.awlock   = &(top->m_awlock);   axi_prt.awprot   = &(top->m_awprot);
-    axi_prt.awqos    = &(top->m_awqos);    axi_prt.awregion = &(top->m_awregion);
-    axi_prt.awvalid  = &(top->m_awvalid);  axi_prt.awready  = &(top->m_awready);
+    // AXI Master (Input to DUT) - s_* signals
+    axi_prt.awid     = &(top->s_awid);     axi_prt.awaddr   = &(top->s_awaddr);
+    axi_prt.awlen    = &(top->s_awlen);    axi_prt.awsize   = &(top->s_awsize);
+    axi_prt.awburst  = &(top->s_awburst);  axi_prt.awcache  = &(top->s_awcache);
+    axi_prt.awlock   = &(top->s_awlock);   axi_prt.awprot   = &(top->s_awprot);
+    axi_prt.awqos    = &(top->s_awqos);    axi_prt.awregion = &(top->s_awregion);
+    axi_prt.awvalid  = &(top->s_awvalid);  axi_prt.awready  = &(top->s_awready);
 
-    axi_prt.wdata    = &(top->m_wdata);    axi_prt.wstrb    = &(top->m_wstrb);
-    axi_prt.wid      = &(top->m_wid);      axi_prt.wlast    = &(top->m_wlast);
-    axi_prt.wvalid   = &(top->m_wvalid);   axi_prt.wready   = &(top->m_wready);
+    axi_prt.wdata    = &(top->s_wdata);    axi_prt.wstrb    = &(top->s_wstrb);
+    axi_prt.wid      = &(top->s_wid);      axi_prt.wlast    = &(top->s_wlast);
+    axi_prt.wvalid   = &(top->s_wvalid);   axi_prt.wready   = &(top->s_wready);
 
-    axi_prt.bid      = &(top->m_bid);      axi_prt.bresp    = &(top->m_bresp);
-    axi_prt.bvalid   = &(top->m_bvalid);   axi_prt.bready   = &(top->m_bready);
+    axi_prt.bid      = &(top->s_bid);      axi_prt.bresp    = &(top->s_bresp);
+    axi_prt.bvalid   = &(top->s_bvalid);   axi_prt.bready   = &(top->s_bready);
 
-    axi_prt.arid     = &(top->m_arid);     axi_prt.araddr   = &(top->m_araddr);
-    axi_prt.arlen    = &(top->m_arlen);    axi_prt.arsize   = &(top->m_arsize);
-    axi_prt.arburst  = &(top->m_arburst);  axi_prt.arcache  = &(top->m_arcache);
-    axi_prt.arlock   = &(top->m_arlock);   axi_prt.arprot   = &(top->m_arprot);
-    axi_prt.arqos    = &(top->m_arqos);    axi_prt.arregion = &(top->m_arregion);
-    axi_prt.arvalid  = &(top->m_arvalid);  axi_prt.arready  = &(top->m_arready);
+    axi_prt.arid     = &(top->s_arid);     axi_prt.araddr   = &(top->s_araddr);
+    axi_prt.arlen    = &(top->s_arlen);    axi_prt.arsize   = &(top->s_arsize);
+    axi_prt.arburst  = &(top->s_arburst);  axi_prt.arcache  = &(top->s_arcache);
+    axi_prt.arlock   = &(top->s_arlock);   axi_prt.arprot   = &(top->s_arprot);
+    axi_prt.arqos    = &(top->s_arqos);    axi_prt.arregion = &(top->s_arregion);
+    axi_prt.arvalid  = &(top->s_arvalid);  axi_prt.arready  = &(top->s_arready);
 
-    axi_prt.rdata    = &(top->m_rdata);    axi_prt.rresp    = &(top->m_rresp);
-    axi_prt.rid      = &(top->m_rid);      axi_prt.rlast    = &(top->m_rlast);
-    axi_prt.rvalid   = &(top->m_rvalid);   axi_prt.rready   = &(top->m_rready);
+    axi_prt.rdata    = &(top->s_rdata);    axi_prt.rresp    = &(top->s_rresp);
+    axi_prt.rid      = &(top->s_rid);      axi_prt.rlast    = &(top->s_rlast);
+    axi_prt.rvalid   = &(top->s_rvalid);   axi_prt.rready   = &(top->s_rready);
 
-    // AXI4-Lite Slave (Output from DUT)
-    axil_prt.awaddr  = &(top->s_awaddr);   axil_prt.awprot  = &(top->s_awprot);
-    axil_prt.awready = &(top->s_awready);  axil_prt.awvalid = &(top->s_awvalid);
-    axil_prt.bready  = &(top->s_bready);   axil_prt.bresp   = &(top->s_bresp);
-    axil_prt.bvalid  = &(top->s_bvalid);
-    axil_prt.wdata   = &(top->s_wdata);    axil_prt.wready  = &(top->s_wready);
-    axil_prt.wstrb   = &(top->s_wstrb);    axil_prt.wvalid  = &(top->s_wvalid);
-    axil_prt.araddr  = &(top->s_araddr);   axil_prt.arprot  = &(top->s_arprot);
-    axil_prt.arready = &(top->s_arready);  axil_prt.arvalid = &(top->s_arvalid);
-    axil_prt.rdata   = &(top->s_rdata);    axil_prt.rready  = &(top->s_rready);
-    axil_prt.rresp   = &(top->s_rresp);    axil_prt.rvalid  = &(top->s_rvalid);
+    // AXI4-Lite Slave (Output from DUT) - m_* signals
+    axil_prt.awaddr  = &(top->m_awaddr);   axil_prt.awprot  = &(top->m_awprot);
+    axil_prt.awready = &(top->m_awready);  axil_prt.awvalid = &(top->m_awvalid);
+    axil_prt.bready  = &(top->m_bready);   axil_prt.bresp   = &(top->m_bresp);
+    axil_prt.bvalid  = &(top->m_bvalid);
+    axil_prt.wdata   = &(top->m_wdata);    axil_prt.wready  = &(top->m_wready);
+    axil_prt.wstrb   = &(top->m_wstrb);    axil_prt.wvalid  = &(top->m_wvalid);
+    axil_prt.araddr  = &(top->m_araddr);   axil_prt.arprot  = &(top->m_arprot);
+    axil_prt.arready = &(top->m_arready);  axil_prt.arvalid = &(top->m_arvalid);
+    axil_prt.rdata   = &(top->m_rdata);    axil_prt.rready  = &(top->m_rready);
+    axil_prt.rresp   = &(top->m_rresp);    axil_prt.rvalid  = &(top->m_rvalid);
 }
 
 static bool check_result(const char* name, bool cond, int& pass, int& fail) {
@@ -105,10 +101,10 @@ int main(int argc, char** argv) {
 
     // Reset
     top->clk   = 0;
-    top->rst_n = 0;
+    top->rst = 1;
     top->eval();
     for (int i = 0; i < 10; i++) { top->clk = !top->clk; top->eval(); }
-    top->rst_n = 1;
+    top->rst = 0;
     top->eval();
 
     int sim_time = 0;

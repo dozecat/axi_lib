@@ -21,7 +21,7 @@ module axil_interconnect_tb
    parameter STRB_WIDTH          = DATA_WIDTH / 8
 )(
    input  wire                    clk,
-   input  wire                    rst_n,
+   input  wire                    rst,
 
    // Slave port 0 (master BFM 0)
    input  wire                    slv0_awvalid,
@@ -152,158 +152,158 @@ module axil_interconnect_tb
 
 // Interface instances
 if_axil #(.ADDR_WIDTH(ADDR_WIDTH),
-          .DATA_WIDTH(DATA_WIDTH)) axil_slv_if [0:1] ();
+          .DATA_WIDTH(DATA_WIDTH)) s_axil_ifs [0:1] ();
 
 if_axil #(.ADDR_WIDTH(ADDR_WIDTH),
-         .DATA_WIDTH(DATA_WIDTH)) axil_mst_if [0:3] ();
+         .DATA_WIDTH(DATA_WIDTH)) m_axil_ifs [0:3] ();
 
-// Slave port 0 -> axil_slv_if[0]
-assign axil_slv_if[0].awvalid = slv0_awvalid;
-assign axil_slv_if[0].awaddr  = slv0_awaddr;
-assign axil_slv_if[0].awprot  = slv0_awprot;
-assign axil_slv_if[0].wvalid  = slv0_wvalid;
-assign axil_slv_if[0].wdata   = slv0_wdata;
-assign axil_slv_if[0].wstrb   = slv0_wstrb;
-assign axil_slv_if[0].bready  = slv0_bready;
-assign axil_slv_if[0].arvalid = slv0_arvalid;
-assign axil_slv_if[0].araddr  = slv0_araddr;
-assign axil_slv_if[0].arprot  = slv0_arprot;
-assign axil_slv_if[0].rready  = slv0_rready;
-assign slv0_awready = axil_slv_if[0].awready;
-assign slv0_wready  = axil_slv_if[0].wready;
-assign slv0_bvalid  = axil_slv_if[0].bvalid;
-assign slv0_bresp   = axil_slv_if[0].bresp;
-assign slv0_arready = axil_slv_if[0].arready;
-assign slv0_rvalid  = axil_slv_if[0].rvalid;
-assign slv0_rdata   = axil_slv_if[0].rdata;
-assign slv0_rresp   = axil_slv_if[0].rresp;
+// Slave port 0 -> s_axil_ifs[0]
+assign s_axil_ifs[0].awvalid = slv0_awvalid;
+assign s_axil_ifs[0].awaddr  = slv0_awaddr;
+assign s_axil_ifs[0].awprot  = slv0_awprot;
+assign s_axil_ifs[0].wvalid  = slv0_wvalid;
+assign s_axil_ifs[0].wdata   = slv0_wdata;
+assign s_axil_ifs[0].wstrb   = slv0_wstrb;
+assign s_axil_ifs[0].bready  = slv0_bready;
+assign s_axil_ifs[0].arvalid = slv0_arvalid;
+assign s_axil_ifs[0].araddr  = slv0_araddr;
+assign s_axil_ifs[0].arprot  = slv0_arprot;
+assign s_axil_ifs[0].rready  = slv0_rready;
+assign slv0_awready = s_axil_ifs[0].awready;
+assign slv0_wready  = s_axil_ifs[0].wready;
+assign slv0_bvalid  = s_axil_ifs[0].bvalid;
+assign slv0_bresp   = s_axil_ifs[0].bresp;
+assign slv0_arready = s_axil_ifs[0].arready;
+assign slv0_rvalid  = s_axil_ifs[0].rvalid;
+assign slv0_rdata   = s_axil_ifs[0].rdata;
+assign slv0_rresp   = s_axil_ifs[0].rresp;
 
-// Slave port 1 -> axil_slv_if[1]
-assign axil_slv_if[1].awvalid = slv1_awvalid;
-assign axil_slv_if[1].awaddr  = slv1_awaddr;
-assign axil_slv_if[1].awprot  = slv1_awprot;
-assign axil_slv_if[1].wvalid  = slv1_wvalid;
-assign axil_slv_if[1].wdata   = slv1_wdata;
-assign axil_slv_if[1].wstrb   = slv1_wstrb;
-assign axil_slv_if[1].bready  = slv1_bready;
-assign axil_slv_if[1].arvalid = slv1_arvalid;
-assign axil_slv_if[1].araddr  = slv1_araddr;
-assign axil_slv_if[1].arprot  = slv1_arprot;
-assign axil_slv_if[1].rready  = slv1_rready;
-assign slv1_awready = axil_slv_if[1].awready;
-assign slv1_wready  = axil_slv_if[1].wready;
-assign slv1_bvalid  = axil_slv_if[1].bvalid;
-assign slv1_bresp   = axil_slv_if[1].bresp;
-assign slv1_arready = axil_slv_if[1].arready;
-assign slv1_rvalid  = axil_slv_if[1].rvalid;
-assign slv1_rdata   = axil_slv_if[1].rdata;
-assign slv1_rresp   = axil_slv_if[1].rresp;
+// Slave port 1 -> s_axil_ifs[1]
+assign s_axil_ifs[1].awvalid = slv1_awvalid;
+assign s_axil_ifs[1].awaddr  = slv1_awaddr;
+assign s_axil_ifs[1].awprot  = slv1_awprot;
+assign s_axil_ifs[1].wvalid  = slv1_wvalid;
+assign s_axil_ifs[1].wdata   = slv1_wdata;
+assign s_axil_ifs[1].wstrb   = slv1_wstrb;
+assign s_axil_ifs[1].bready  = slv1_bready;
+assign s_axil_ifs[1].arvalid = slv1_arvalid;
+assign s_axil_ifs[1].araddr  = slv1_araddr;
+assign s_axil_ifs[1].arprot  = slv1_arprot;
+assign s_axil_ifs[1].rready  = slv1_rready;
+assign slv1_awready = s_axil_ifs[1].awready;
+assign slv1_wready  = s_axil_ifs[1].wready;
+assign slv1_bvalid  = s_axil_ifs[1].bvalid;
+assign slv1_bresp   = s_axil_ifs[1].bresp;
+assign slv1_arready = s_axil_ifs[1].arready;
+assign slv1_rvalid  = s_axil_ifs[1].rvalid;
+assign slv1_rdata   = s_axil_ifs[1].rdata;
+assign slv1_rresp   = s_axil_ifs[1].rresp;
 
-// Master port 0 -> axil_mst_if[0]
-assign mst0_awvalid = axil_mst_if[0].awvalid;
-assign mst0_awaddr  = axil_mst_if[0].awaddr;
-assign mst0_awprot  = axil_mst_if[0].awprot;
-assign mst0_wvalid  = axil_mst_if[0].wvalid;
-assign mst0_wdata   = axil_mst_if[0].wdata;
-assign mst0_wstrb   = axil_mst_if[0].wstrb;
-assign mst0_bready  = axil_mst_if[0].bready;
-assign mst0_arvalid = axil_mst_if[0].arvalid;
-assign mst0_araddr  = axil_mst_if[0].araddr;
-assign mst0_arprot  = axil_mst_if[0].arprot;
-assign mst0_rready  = axil_mst_if[0].rready;
-assign axil_mst_if[0].awready = mst0_awready;
-assign axil_mst_if[0].wready  = mst0_wready;
-assign axil_mst_if[0].bvalid  = mst0_bvalid;
-assign axil_mst_if[0].bresp   = mst0_bresp;
-assign axil_mst_if[0].arready = mst0_arready;
-assign axil_mst_if[0].rvalid  = mst0_rvalid;
-assign axil_mst_if[0].rdata   = mst0_rdata;
-assign axil_mst_if[0].rresp   = mst0_rresp;
+// Master port 0 -> m_axil_ifs[0]
+assign mst0_awvalid = m_axil_ifs[0].awvalid;
+assign mst0_awaddr  = m_axil_ifs[0].awaddr;
+assign mst0_awprot  = m_axil_ifs[0].awprot;
+assign mst0_wvalid  = m_axil_ifs[0].wvalid;
+assign mst0_wdata   = m_axil_ifs[0].wdata;
+assign mst0_wstrb   = m_axil_ifs[0].wstrb;
+assign mst0_bready  = m_axil_ifs[0].bready;
+assign mst0_arvalid = m_axil_ifs[0].arvalid;
+assign mst0_araddr  = m_axil_ifs[0].araddr;
+assign mst0_arprot  = m_axil_ifs[0].arprot;
+assign mst0_rready  = m_axil_ifs[0].rready;
+assign m_axil_ifs[0].awready = mst0_awready;
+assign m_axil_ifs[0].wready  = mst0_wready;
+assign m_axil_ifs[0].bvalid  = mst0_bvalid;
+assign m_axil_ifs[0].bresp   = mst0_bresp;
+assign m_axil_ifs[0].arready = mst0_arready;
+assign m_axil_ifs[0].rvalid  = mst0_rvalid;
+assign m_axil_ifs[0].rdata   = mst0_rdata;
+assign m_axil_ifs[0].rresp   = mst0_rresp;
 
-// Master port 1 -> axil_mst_if[1]
-assign mst1_awvalid = axil_mst_if[1].awvalid;
-assign mst1_awaddr  = axil_mst_if[1].awaddr;
-assign mst1_awprot  = axil_mst_if[1].awprot;
-assign mst1_wvalid  = axil_mst_if[1].wvalid;
-assign mst1_wdata   = axil_mst_if[1].wdata;
-assign mst1_wstrb   = axil_mst_if[1].wstrb;
-assign mst1_bready  = axil_mst_if[1].bready;
-assign mst1_arvalid = axil_mst_if[1].arvalid;
-assign mst1_araddr  = axil_mst_if[1].araddr;
-assign mst1_arprot  = axil_mst_if[1].arprot;
-assign mst1_rready  = axil_mst_if[1].rready;
-assign axil_mst_if[1].awready = mst1_awready;
-assign axil_mst_if[1].wready  = mst1_wready;
-assign axil_mst_if[1].bvalid  = mst1_bvalid;
-assign axil_mst_if[1].bresp   = mst1_bresp;
-assign axil_mst_if[1].arready = mst1_arready;
-assign axil_mst_if[1].rvalid  = mst1_rvalid;
-assign axil_mst_if[1].rdata   = mst1_rdata;
-assign axil_mst_if[1].rresp   = mst1_rresp;
+// Master port 1 -> m_axil_ifs[1]
+assign mst1_awvalid = m_axil_ifs[1].awvalid;
+assign mst1_awaddr  = m_axil_ifs[1].awaddr;
+assign mst1_awprot  = m_axil_ifs[1].awprot;
+assign mst1_wvalid  = m_axil_ifs[1].wvalid;
+assign mst1_wdata   = m_axil_ifs[1].wdata;
+assign mst1_wstrb   = m_axil_ifs[1].wstrb;
+assign mst1_bready  = m_axil_ifs[1].bready;
+assign mst1_arvalid = m_axil_ifs[1].arvalid;
+assign mst1_araddr  = m_axil_ifs[1].araddr;
+assign mst1_arprot  = m_axil_ifs[1].arprot;
+assign mst1_rready  = m_axil_ifs[1].rready;
+assign m_axil_ifs[1].awready = mst1_awready;
+assign m_axil_ifs[1].wready  = mst1_wready;
+assign m_axil_ifs[1].bvalid  = mst1_bvalid;
+assign m_axil_ifs[1].bresp   = mst1_bresp;
+assign m_axil_ifs[1].arready = mst1_arready;
+assign m_axil_ifs[1].rvalid  = mst1_rvalid;
+assign m_axil_ifs[1].rdata   = mst1_rdata;
+assign m_axil_ifs[1].rresp   = mst1_rresp;
 
-// Master port 2 -> axil_mst_if[2]
-assign mst2_awvalid = axil_mst_if[2].awvalid;
-assign mst2_awaddr  = axil_mst_if[2].awaddr;
-assign mst2_awprot  = axil_mst_if[2].awprot;
-assign mst2_wvalid  = axil_mst_if[2].wvalid;
-assign mst2_wdata   = axil_mst_if[2].wdata;
-assign mst2_wstrb   = axil_mst_if[2].wstrb;
-assign mst2_bready  = axil_mst_if[2].bready;
-assign mst2_arvalid = axil_mst_if[2].arvalid;
-assign mst2_araddr  = axil_mst_if[2].araddr;
-assign mst2_arprot  = axil_mst_if[2].arprot;
-assign mst2_rready  = axil_mst_if[2].rready;
-assign axil_mst_if[2].awready = mst2_awready;
-assign axil_mst_if[2].wready  = mst2_wready;
-assign axil_mst_if[2].bvalid  = mst2_bvalid;
-assign axil_mst_if[2].bresp   = mst2_bresp;
-assign axil_mst_if[2].arready = mst2_arready;
-assign axil_mst_if[2].rvalid  = mst2_rvalid;
-assign axil_mst_if[2].rdata   = mst2_rdata;
-assign axil_mst_if[2].rresp   = mst2_rresp;
+// Master port 2 -> m_axil_ifs[2]
+assign mst2_awvalid = m_axil_ifs[2].awvalid;
+assign mst2_awaddr  = m_axil_ifs[2].awaddr;
+assign mst2_awprot  = m_axil_ifs[2].awprot;
+assign mst2_wvalid  = m_axil_ifs[2].wvalid;
+assign mst2_wdata   = m_axil_ifs[2].wdata;
+assign mst2_wstrb   = m_axil_ifs[2].wstrb;
+assign mst2_bready  = m_axil_ifs[2].bready;
+assign mst2_arvalid = m_axil_ifs[2].arvalid;
+assign mst2_araddr  = m_axil_ifs[2].araddr;
+assign mst2_arprot  = m_axil_ifs[2].arprot;
+assign mst2_rready  = m_axil_ifs[2].rready;
+assign m_axil_ifs[2].awready = mst2_awready;
+assign m_axil_ifs[2].wready  = mst2_wready;
+assign m_axil_ifs[2].bvalid  = mst2_bvalid;
+assign m_axil_ifs[2].bresp   = mst2_bresp;
+assign m_axil_ifs[2].arready = mst2_arready;
+assign m_axil_ifs[2].rvalid  = mst2_rvalid;
+assign m_axil_ifs[2].rdata   = mst2_rdata;
+assign m_axil_ifs[2].rresp   = mst2_rresp;
 
-// Master port 3 -> axil_mst_if[3]
-assign mst3_awvalid = axil_mst_if[3].awvalid;
-assign mst3_awaddr  = axil_mst_if[3].awaddr;
-assign mst3_awprot  = axil_mst_if[3].awprot;
-assign mst3_wvalid  = axil_mst_if[3].wvalid;
-assign mst3_wdata   = axil_mst_if[3].wdata;
-assign mst3_wstrb   = axil_mst_if[3].wstrb;
-assign mst3_bready  = axil_mst_if[3].bready;
-assign mst3_arvalid = axil_mst_if[3].arvalid;
-assign mst3_araddr  = axil_mst_if[3].araddr;
-assign mst3_arprot  = axil_mst_if[3].arprot;
-assign mst3_rready  = axil_mst_if[3].rready;
-assign axil_mst_if[3].awready = mst3_awready;
-assign axil_mst_if[3].wready  = mst3_wready;
-assign axil_mst_if[3].bvalid  = mst3_bvalid;
-assign axil_mst_if[3].bresp   = mst3_bresp;
-assign axil_mst_if[3].arready = mst3_arready;
-assign axil_mst_if[3].rvalid  = mst3_rvalid;
-assign axil_mst_if[3].rdata   = mst3_rdata;
-assign axil_mst_if[3].rresp   = mst3_rresp;
+// Master port 3 -> m_axil_ifs[3]
+assign mst3_awvalid = m_axil_ifs[3].awvalid;
+assign mst3_awaddr  = m_axil_ifs[3].awaddr;
+assign mst3_awprot  = m_axil_ifs[3].awprot;
+assign mst3_wvalid  = m_axil_ifs[3].wvalid;
+assign mst3_wdata   = m_axil_ifs[3].wdata;
+assign mst3_wstrb   = m_axil_ifs[3].wstrb;
+assign mst3_bready  = m_axil_ifs[3].bready;
+assign mst3_arvalid = m_axil_ifs[3].arvalid;
+assign mst3_araddr  = m_axil_ifs[3].araddr;
+assign mst3_arprot  = m_axil_ifs[3].arprot;
+assign mst3_rready  = m_axil_ifs[3].rready;
+assign m_axil_ifs[3].awready = mst3_awready;
+assign m_axil_ifs[3].wready  = mst3_wready;
+assign m_axil_ifs[3].bvalid  = mst3_bvalid;
+assign m_axil_ifs[3].bresp   = mst3_bresp;
+assign m_axil_ifs[3].arready = mst3_arready;
+assign m_axil_ifs[3].rvalid  = mst3_rvalid;
+assign m_axil_ifs[3].rdata   = mst3_rdata;
+assign m_axil_ifs[3].rresp   = mst3_rresp;
 
 // DUT instantiation with interface ports
 axil_interconnect
 #(
-   .SLV_NUM         ( 2 ),
-   .MST_NUM         ( 4 ),
+   .S_NUM           ( 2 ),
+   .M_NUM           ( 4 ),
    .ADDR_WIDTH      ( ADDR_WIDTH ),
    .DATA_WIDTH      ( DATA_WIDTH ),
-   .SLV_SKID_EN     ( 2'b01 ),
-   .SLV_PRIORITY    ( {2'h0, 2'h1} ),
-   .MST_SKID_EN     ( 4'b1010 ),
-   .MST_START_ADDR  ( {16'h0300, 16'h0200, 16'h0100, 16'h0000} ),
-   .MST_END_ADDR    ( {16'h03FF, 16'h02FF, 16'h01FF, 16'h00FF} ),
-   .MST_KEEP_BASE   ( 4'b1111 )
+   .S_SKID_EN       ( 2'b01 ),
+   .S_PRIORITY      ( {2'h0, 2'h1} ),
+   .M_SKID_EN       ( 4'b1010 ),
+   .M_START_ADDR    ( {16'h0300, 16'h0200, 16'h0100, 16'h0000} ),
+   .M_END_ADDR      ( {16'h03FF, 16'h02FF, 16'h01FF, 16'h00FF} ),
+   .M_KEEP_BASE     ( 4'b1111 )
 )
 dut
 (
-   .aclk            ( clk ),
-   .aresetn         ( rst_n ),
+   .clk             ( clk ),
+   .rst             ( rst ),
 
-   .axil_slv_if     ( axil_slv_if ),
-   .axil_mst_if     ( axil_mst_if )
+   .s_axil_ifs      ( s_axil_ifs ),
+   .m_axil_ifs      ( m_axil_ifs )
 );
 
 endmodule

@@ -211,7 +211,7 @@ int main(int argc, char** argv) {
     top->trace(tfp, 99);
     tfp->open("waveform.vcd");
     top->clk = 0;
-    top->rst_n = 0;
+    top->rst = 1;
     for (int i = 0; i < SLV_NUM; i++) {
         mst_bfm[i].update_output();
     }
@@ -248,7 +248,7 @@ int main(int argc, char** argv) {
         top->clk = !top->clk;
         tick++;
         if (tick == 5)
-            top->rst_n = 1;
+            top->rst = 0;
 
         if (top->clk) {
             for (int i = 0; i < SLV_NUM; i++) {

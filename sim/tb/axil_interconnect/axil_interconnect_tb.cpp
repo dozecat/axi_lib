@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
     tfp->open("waveform.vcd");
 
     top->clk = 0;
-    top->rst_n = 0;
+    top->rst = 1;
 
     uint64_t tick = 0;
     uint64_t cycle = 0;
@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
         tick++;
 
         if (tick == 5) {
-            top->rst_n = 1;
+            top->rst = 0;
         }
 
         if (top->clk) {
