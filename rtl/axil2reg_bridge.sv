@@ -46,53 +46,6 @@ initial begin
 end
 
 //*****************************************************************************
-// Shared register port mutex
-//*****************************************************************************
-wire reg_port_active;
-
-assign reg_port_active = (w_state == W_ISSUE) || (r_state == R_ISSUE);
-
-//*****************************************************************************
-// Register interface drive (write has priority)
-//*****************************************************************************
-always_comb begin
-   if (w_state == W_ISSUE)
-      reg_wr_req = 1'b1;
-   else
-      reg_wr_req = 1'b0;
-end
-
-always_comb begin
-   if (r_state == R_ISSUE)
-      reg_rd_req = 1'b1;
-   else
-      reg_rd_req = 1'b0;
-end
-
-always_comb begin
-   if (w_state == W_ISSUE)
-      reg_addr = w_addr;
-   else if (r_state == R_ISSUE)
-      reg_addr = r_addr;
-   else
-      reg_addr = '0;
-end
-
-always_comb begin
-   if (w_state == W_ISSUE)
-      reg_wr_data = w_data;
-   else
-      reg_wr_data = '0;
-end
-
-always_comb begin
-   if (w_state == W_ISSUE)
-      reg_wr_mask = w_strb;
-   else
-      reg_wr_mask = '0;
-end
-
-//*****************************************************************************
 // Write channel
 //*****************************************************************************
 reg  [ADDR_WIDTH       -1:0]  w_addr;
@@ -242,6 +195,53 @@ assign s_axil_if.arready = (r_state == R_IDLE) && !reg_port_active;
 assign s_axil_if.rvalid  = (r_state == R_RESP);
 assign s_axil_if.rdata   = r_data;
 assign s_axil_if.rresp   = {RESP_WIDTH{1'b0}};
+
+//*****************************************************************************
+// Shared register port mutex
+//*****************************************************************************
+wire reg_port_active;
+
+assign reg_port_active = (w_state == W_ISSUE) || (r_state == R_ISSUE);
+
+//*****************************************************************************
+// Register interface drive (write has priority)
+//*****************************************************************************
+always_comb begin
+   if (w_state == W_ISSUE)
+      reg_wr_req = 1'b1;
+   else
+      reg_wr_req = 1'b0;
+end
+
+always_comb begin
+   if (r_state == R_ISSUE)
+      reg_rd_req = 1'b1;
+   else
+      reg_rd_req = 1'b0;
+end
+
+always_comb begin
+   if (w_state == W_ISSUE)
+      reg_addr = w_addr;
+   else if (r_state == R_ISSUE)
+      reg_addr = r_addr;
+   else
+      reg_addr = '0;
+end
+
+always_comb begin
+   if (w_state == W_ISSUE)
+      reg_wr_data = w_data;
+   else
+      reg_wr_data = '0;
+end
+
+always_comb begin
+   if (w_state == W_ISSUE)
+      reg_wr_mask = w_strb;
+   else
+      reg_wr_mask = '0;
+end
 
 endmodule
 

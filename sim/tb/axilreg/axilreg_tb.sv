@@ -29,8 +29,10 @@ module axilreg_tb
    output logic [DATA_WIDTH-1:0]  s_rdata,
    output logic [1:0]             s_rresp,
 
+   output wire [7:0]              reg_test0,
    input  wire [31:0]             reg_test1,
-   output wire [31:0]             reg_test2
+   output wire [31:0]             reg_test2,
+   output wire [15:0]             reg_test3
 );
 
 if_axil #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) s_axil_if ();
@@ -59,8 +61,10 @@ axil_register_file dut (
    .clk       ( clk       ),
    .rst       ( rst       ),
    .s_axil_if ( s_axil_if ),
+   .reg_test0 ( reg_test0 ),
    .reg_test1 ( reg_test1 ),
-   .reg_test2 ( reg_test2 )
+   .reg_test2 ( reg_test2 ),
+   .reg_test3 ( reg_test3 )
 );
 
 endmodule

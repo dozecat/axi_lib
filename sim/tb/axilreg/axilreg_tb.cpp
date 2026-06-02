@@ -25,8 +25,10 @@
 #define DATA_WIDTH 32
 #define ADDR_WIDTH 16
 
-#define REG_TEST1_ADDR 0x00
-#define REG_TEST2_ADDR 0x04
+#define REG_TEST0_ADDR 0x00
+#define REG_TEST1_ADDR 0x04
+#define REG_TEST2_ADDR 0x08
+#define REG_TEST3_ADDR 0x0c
 
 static void connect_axil(axil_ptr<DATA_WIDTH, ADDR_WIDTH>& p, Vaxilreg_tb* top) {
     p.awaddr  = &(top->s_awaddr);   p.awprot  = &(top->s_awprot);
@@ -76,13 +78,17 @@ int main(int argc, char** argv) {
 
     enum {
         PHASE_INIT, PHASE_T1_WR, PHASE_T1_RD, PHASE_T2_SET,
-        PHASE_T2_RD, PHASE_T3_MULTI, PHASE_T3_CHK, PHASE_DONE
+        PHASE_T2_RD, PHASE_T3_MULTI, PHASE_T3_CHK,
+        PHASE_T4_WR, PHASE_T4_RD, PHASE_T5_WR, PHASE_T5_RD,
+        PHASE_DONE
     } phase = PHASE_INIT;
     int phase_start = 0, multi_cnt = 0;
 
     const uint32_t test_val_a = 0xDEADBEEF;
     const uint32_t test_val_b = 0x12345678;
     const uint32_t test_val_c = 0xA5A5A5A5;
+    const uint32_t test_val_d = 0xAB;        // reg_test0 (8-bit)
+    const uint32_t test_val_e = 0xCAFE;      // reg_test3 (16-bit)
 
     std::cout << "\n=== AXI4-Lite Register File Testbench ===" << std::endl;
 
@@ -101,8 +107,8 @@ int main(int argc, char** argv) {
             // Test 1: write reg_test2 via AXI-Lite, verify via port and readback
             case PHASE_INIT:
                 if (cycle == 10) {
-                    std::cout << "\n[TEST 1] Write reg_test2 via AXI-Lite" << std::endl;
-                    std::cout << "  Write 0x04 = 0x" << std::hex << test_val_a << std::dec << std::endl;
+                    std::cout << "\n[TEST 1] Write reg_test2 @ 0x08 via AXI-Lite" << std::endl;
+                    std::cout << "  Write 0x08 = 0x" << std::hex << test_val_a << std::dec << std::endl;
                     axil_mst.write(REG_TEST2_ADDR, test_val_a);
                     phase = PHASE_T1_WR;
                     phase_start = cycle;
@@ -113,7 +119,7 @@ int main(int argc, char** argv) {
                 if (cycle > phase_start + 80) {
                     test_ok = (top->reg_test2 == test_val_a);
                     check("reg_test2 port reflects AXI-Lite write", test_ok, pass, fail);
-                    std::cout << "  Read back 0x04 via AXI-Lite" << std::endl;
+                    std::cout << "  Read back 0x08 via AXI-Lite" << std::endl;
                     axil_mst.read(REG_TEST2_ADDR);
                     phase = PHASE_T1_RD;
                 }
@@ -124,10 +130,10 @@ int main(int argc, char** argv) {
                     test_ok = (rd_val == test_val_a);
                     check("reg_test2 AXI-Lite readback", test_ok, pass, fail);
 
-                    std::cout << "\n[TEST 2] Read reg_test1 via AXI-Lite" << std::endl;
+                    std::cout << "\n[TEST 2] Read reg_test1 @ 0x04 via AXI-Lite" << std::endl;
                     top->reg_test1 = test_val_b;
                     std::cout << "  Set reg_test1 = 0x" << std::hex << test_val_b << std::dec << std::endl;
-                    std::cout << "  Read 0x00 via AXI-Lite" << std::endl;
+                    std::cout << "  Read 0x04 via AXI-Lite" << std::endl;
                     axil_mst.read(REG_TEST1_ADDR);
                     phase = PHASE_T2_SET;
                 }
@@ -139,7 +145,7 @@ int main(int argc, char** argv) {
                     test_ok = (rd_val == test_val_b);
                     check("reg_test1 AXI-Lite readback matches port", test_ok, pass, fail);
 
-                    std::cout << "\n[TEST 3] Multiple writes" << std::endl;
+                    std::cout << "\n[TEST 3] Multiple writes to reg_test2 @ 0x08" << std::endl;
                     axil_mst.write(REG_TEST2_ADDR, test_val_c);
                     phase = PHASE_T3_MULTI;
                     phase_start = cycle;
@@ -171,6 +177,54 @@ int main(int argc, char** argv) {
                 if (multi_cnt == 2 && axil_mst.get_read_data(rd_val)) {
                     test_ok = (rd_val == 0x11112222);
                     check("reg_test2 AXI-Lite readback after second write", test_ok, pass, fail);
+
+                    std::cout << "\n[TEST 4] Write reg_test0 @ 0x00 via AXI-Lite" << std::endl;
+                    std::cout << "  Write 0x00 = 0x" << std::hex << test_val_d << std::dec << std::endl;
+                    axil_mst.write(REG_TEST0_ADDR, test_val_d);
+                    phase = PHASE_T4_WR;
+                    phase_start = cycle;
+                }
+                break;
+
+            // Test 4: write reg_test0 (8-bit) via AXI-Lite, verify via port and readback
+            case PHASE_T4_WR:
+                if (cycle > phase_start + 80) {
+                    test_ok = (top->reg_test0 == (test_val_d & 0xFF));
+                    check("reg_test0 port reflects AXI-Lite write", test_ok, pass, fail);
+                    std::cout << "  Read back 0x00 via AXI-Lite" << std::endl;
+                    axil_mst.read(REG_TEST0_ADDR);
+                    phase = PHASE_T4_RD;
+                }
+                break;
+
+            case PHASE_T4_RD:
+                if (axil_mst.get_read_data(rd_val)) {
+                    test_ok = ((rd_val & 0xFF) == (test_val_d & 0xFF));
+                    check("reg_test0 AXI-Lite readback", test_ok, pass, fail);
+
+                    std::cout << "\n[TEST 5] Write reg_test3 @ 0x0c via AXI-Lite" << std::endl;
+                    std::cout << "  Write 0x0c = 0x" << std::hex << test_val_e << std::dec << std::endl;
+                    axil_mst.write(REG_TEST3_ADDR, test_val_e);
+                    phase = PHASE_T5_WR;
+                    phase_start = cycle;
+                }
+                break;
+
+            // Test 5: write reg_test3 (16-bit) via AXI-Lite, verify via port and readback
+            case PHASE_T5_WR:
+                if (cycle > phase_start + 80) {
+                    test_ok = (top->reg_test3 == (test_val_e & 0xFFFF));
+                    check("reg_test3 port reflects AXI-Lite write", test_ok, pass, fail);
+                    std::cout << "  Read back 0x0c via AXI-Lite" << std::endl;
+                    axil_mst.read(REG_TEST3_ADDR);
+                    phase = PHASE_T5_RD;
+                }
+                break;
+
+            case PHASE_T5_RD:
+                if (axil_mst.get_read_data(rd_val)) {
+                    test_ok = ((rd_val & 0xFFFF) == (test_val_e & 0xFFFF));
+                    check("reg_test3 AXI-Lite readback", test_ok, pass, fail);
                     phase = PHASE_DONE;
                     phase_start = cycle;
                 }
