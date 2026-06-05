@@ -16,22 +16,24 @@
 
 module axi_interconnect
 #(
-   parameter M_NUM               = 4,
-   parameter S_NUM               = 4,
-   parameter ADDR_WIDTH          = 32,
-   parameter DATA_WIDTH          = 64,
-   parameter PRIORITY_WIDTH      = 4,
-   parameter S_ID_WIDTH          = 8,
-   parameter S_BUF_EN            = {S_NUM{1'b0}},
-   parameter S_BUF_DEPTH         = {S_NUM{16'b0}},
-   parameter S_PRIORITY          = {S_NUM*PRIORITY_WIDTH{1'b0}},
-   parameter M_ID_WIDTH          = S_ID_WIDTH + $clog2(M_NUM),
-   parameter M_BUF_EN            = {M_NUM{1'b0}},
-   parameter M_BUF_DEPTH         = {M_NUM{16'b0}},
-   parameter M_START_ADDR        = {M_NUM*ADDR_WIDTH{1'b0}},
-   parameter M_END_ADDR          = {M_NUM*ADDR_WIDTH{1'b1}},
-   parameter M_KEEP_BASE         = {M_NUM{1'b0}},
-   parameter RAM_STYLE           = "distributed"
+   parameter                     M_NUM = 4,
+   parameter                     S_NUM = 4,
+   parameter                     ADDR_WIDTH = 32,
+   parameter                     DATA_WIDTH = 64,
+   parameter                     PRIORITY_WIDTH = 4,
+   parameter                     AUX_RAM_STYLE = "distributed",
+   parameter                     S_ID_WIDTH = 8,
+   parameter bit                 S_BUF_EN    [0:S_NUM-1] = '{default:1'b0},
+   parameter int                 S_BUF_DEPTH [0:S_NUM-1] = '{default:16'd0},
+   parameter string              S_RAM_STYLE [0:S_NUM-1] = '{default:"block"},
+   parameter                     S_PRIORITY = {S_NUM*PRIORITY_WIDTH{1'b0}},
+   parameter                     M_ID_WIDTH = S_ID_WIDTH + $clog2(M_NUM),
+   parameter bit                 M_BUF_EN    [0:M_NUM-1] = '{default:1'b0},
+   parameter int                 M_BUF_DEPTH [0:M_NUM-1] = '{default:16'd0},
+   parameter string              M_RAM_STYLE [0:M_NUM-1] = '{default:"block"},
+   parameter                     M_START_ADDR = {M_NUM*ADDR_WIDTH{1'b0}},
+   parameter                     M_END_ADDR = {M_NUM*ADDR_WIDTH{1'b1}},
+   parameter                     M_KEEP_BASE = {M_NUM{1'b0}}
 )(
    input  wire                   clk,
    input  wire                   rst,
@@ -153,10 +155,10 @@ end
 initial begin
    for (integer m = 0; m < S_NUM; m++) begin
       if (S_BUF_EN[m]) begin
-         if (S_BUF_DEPTH[m*16+:16] < 2)
-            $error("S_BUF_EN[%0d] enabled but S_BUF_DEPTH[%0d]=%0d (< 2)", m, m, S_BUF_DEPTH[m*16+:16]);
-         if ((S_BUF_DEPTH[m*16+:16] & (S_BUF_DEPTH[m*16+:16] - 1)) != 0)
-            $error("S_BUF_EN[%0d] enabled but S_BUF_DEPTH[%0d]=%0d (not power-of-2)", m, m, S_BUF_DEPTH[m*16+:16]);
+         if (S_BUF_DEPTH[m] < 2)
+            $error("S_BUF_EN[%0d] enabled but S_BUF_DEPTH[%0d]=%0d (< 2)", m, m, S_BUF_DEPTH[m]);
+         if ((S_BUF_DEPTH[m] & (S_BUF_DEPTH[m] - 1)) != 0)
+            $error("S_BUF_EN[%0d] enabled but S_BUF_DEPTH[%0d]=%0d (not power-of-2)", m, m, S_BUF_DEPTH[m]);
       end
    end
 end
@@ -164,10 +166,10 @@ end
 initial begin
    for (integer n = 0; n < M_NUM; n++) begin
       if (M_BUF_EN[n]) begin
-         if (M_BUF_DEPTH[n*16+:16] < 2)
-            $error("M_BUF_EN[%0d] enabled but M_BUF_DEPTH[%0d]=%0d (< 2)", n, n, M_BUF_DEPTH[n*16+:16]);
-         if ((M_BUF_DEPTH[n*16+:16] & (M_BUF_DEPTH[n*16+:16] - 1)) != 0)
-            $error("M_BUF_EN[%0d] enabled but M_BUF_DEPTH[%0d]=%0d (not power-of-2)", n, n, M_BUF_DEPTH[n*16+:16]);
+         if (M_BUF_DEPTH[n] < 2)
+            $error("M_BUF_EN[%0d] enabled but M_BUF_DEPTH[%0d]=%0d (< 2)", n, n, M_BUF_DEPTH[n]);
+         if ((M_BUF_DEPTH[n] & (M_BUF_DEPTH[n] - 1)) != 0)
+            $error("M_BUF_EN[%0d] enabled but M_BUF_DEPTH[%0d]=%0d (not power-of-2)", n, n, M_BUF_DEPTH[n]);
       end
    end
 end
@@ -193,7 +195,6 @@ generate
                      s_axi_ifs[i].arid,     s_axi_ifs[i].araddr};
 
       if (S_BUF_EN[i]) begin : buffer_on
-         localparam BD = S_BUF_DEPTH[i*16+:16];
          wire w_full, w_empty, r_full, r_empty;
 
          skid_buffer #(
@@ -209,12 +210,12 @@ generate
             .ready_i             ( i_awready[i] )
          );
 
-         sync_fifo #(
+          sync_fifo #(
             .WIDTH               ( S_WCH_WIDTH ),
-            .DEPTH               ( BD ),
+            .DEPTH               ( S_BUF_DEPTH[i] ),
             .FWFT                ( "true" ),
-            .RAM_STYLE           ( RAM_STYLE )
-         ) u_w (
+            .RAM_STYLE           ( S_RAM_STYLE[i] )
+          ) u_w (
             .clk                 ( clk ),
             .rst                 ( rst ),
             .wr_en               ( s_axi_ifs[i].wvalid && !w_full ),
@@ -257,12 +258,12 @@ generate
             .ready_i             ( i_arready[i] )
          );
 
-         sync_fifo #(
+          sync_fifo #(
             .WIDTH               ( RCH_WIDTH ),
-            .DEPTH               ( BD ),
+            .DEPTH               ( S_BUF_DEPTH[i] ),
             .FWFT                ( "true" ),
-            .RAM_STYLE           ( RAM_STYLE )
-         ) u_r (
+            .RAM_STYLE           ( S_RAM_STYLE[i] )
+          ) u_r (
             .clk                 ( clk ),
             .rst                 ( rst ),
             .wr_en               ( i_rvalid[i] ),
@@ -827,7 +828,6 @@ generate
       end
 
       if (M_BUF_EN[j]) begin : buffer_on
-         localparam BD = M_BUF_DEPTH[j*16+:16];
          wire [AWCH_WIDTH-1:0] aw_rd;
          wire [WCH_WIDTH-1:0]  w_rd;
          wire [ARCH_WIDTH-1:0] ar_rd;
@@ -855,12 +855,12 @@ generate
                  m_axi_ifs[j].awid} = aw_rd[AWCH_WIDTH-1:ADDR_WIDTH];
          assign m_axi_ifs[j].awaddr = awaddr_xlat_buf;
 
-         sync_fifo #(
+          sync_fifo #(
             .WIDTH               ( WCH_WIDTH ),
-            .DEPTH               ( BD ),
+            .DEPTH               ( M_BUF_DEPTH[j] ),
             .FWFT                ( "true" ),
-            .RAM_STYLE           ( RAM_STYLE )
-         ) u_w (
+            .RAM_STYLE           ( M_RAM_STYLE[j] )
+           ) u_w (
             .clk                 ( clk ),
             .rst                 ( rst ),
             .wr_en               ( o_wvalid[j] && !w_full ),
@@ -911,10 +911,10 @@ generate
 
          sync_fifo #(
             .WIDTH               ( RCH_WIDTH ),
-            .DEPTH               ( BD ),
+            .DEPTH               ( M_BUF_DEPTH[j] ),
             .FWFT                ( "true" ),
-            .RAM_STYLE           ( RAM_STYLE )
-         ) u_r (
+            .RAM_STYLE           ( M_RAM_STYLE[j] )
+           ) u_r (
             .clk                 ( clk ),
             .rst                 ( rst ),
             .wr_en               ( m_axi_ifs[j].rvalid && !r_full ),
