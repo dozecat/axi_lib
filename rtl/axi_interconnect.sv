@@ -661,7 +661,7 @@ generate
          .en                  ( aw_arb_en ),
          .request             ( aw_req_masked ),
          .grant               ( aw_grant ),
-         .selsect             ( aw_grant_encoded )
+         .select             ( aw_grant_encoded )
       );
 
       assign o_awvalid[j] = |aw_grant;
@@ -709,10 +709,16 @@ generate
          end
       end
 
-      // s2m_wready = grant W ready to whichever master has W data
+      // s2m_wready = grant W ready only to the selected master
       always_comb begin
          for (int k = 0; k < S_NUM; k++) begin
-            s2m_wready[j*S_NUM+k] = s2m_wvalid[j*S_NUM+k] && o_wready[j];
+            s2m_wready[j*S_NUM+k] = 1'b0;
+         end
+         for (int k = 0; k < S_NUM; k++) begin
+            if (s2m_wvalid[j*S_NUM+k]) begin
+               s2m_wready[j*S_NUM+k] = o_wready[j];
+               break;
+            end
          end
       end
 
@@ -758,7 +764,7 @@ generate
          .en                  ( ar_arb_en ),
          .request             ( ar_req_masked ),
          .grant               ( ar_grant ),
-         .selsect             ( ar_grant_encoded )
+         .select             ( ar_grant_encoded )
       );
 
       assign o_arvalid[j] = |ar_grant;

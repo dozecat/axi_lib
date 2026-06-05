@@ -30,7 +30,7 @@ module arbiter
    input  wire                      en,
    input  wire [PORTS         -1:0] request,
    output wire [PORTS         -1:0] grant,
-   output wire [$clog2(PORTS) -1:0] selsect
+   output wire [$clog2(PORTS) -1:0] select
 );
 
 // Per-port prio extraction
@@ -114,19 +114,19 @@ always_ff @ (posedge clk or posedge rst) begin
 end
 
 // Select output: binary-encoded grant index
-reg [$clog2(PORTS)-1:0] selsect_r;
+reg [$clog2(PORTS)-1:0] select_r;
 
 always_comb begin
-   selsect_r = '0;
+   select_r = '0;
    for (int i = 0; i < PORTS; i++) begin
       if (grant[i]) begin
-            selsect_r = i[$clog2(PORTS)-1:0];
+            select_r = i[$clog2(PORTS)-1:0];
             break;
       end
    end
 end
 
-assign selsect = selsect_r;
+assign select = select_r;
 
 endmodule
 

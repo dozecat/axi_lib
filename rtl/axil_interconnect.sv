@@ -497,7 +497,7 @@ generate
          .en                  ( aw_arb_en ),
          .request             ( aw_req_masked ),
          .grant               ( aw_grant ),
-         .selsect             ( )
+         .select             ( )
       );
 
       always_ff @(posedge clk or posedge rst) begin
@@ -654,7 +654,7 @@ generate
          .en                  ( ar_arb_en ),
          .request             ( ar_req_masked ),
          .grant               ( ar_grant ),
-         .selsect             ( )
+         .select             ( )
       );
 
       logic o_arvalid_sel;
