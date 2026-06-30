@@ -29,6 +29,35 @@
 
 template <vluint64_t TSTEP_PS = 10>
 class ClockGen {
+public:
+    ClockGen() = default;
+
+    void init(double freq_mhz, CData* sig) {
+        signal = sig;
+        vluint64_t raw = (vluint64_t)(500000.0 / freq_mhz + 0.5);
+        half_period_ps = ((raw + TSTEP_PS / 2) / TSTEP_PS) * TSTEP_PS;
+        next_edge_ps   = half_period_ps;
+        *signal        = 0;
+        cached_edge    = 0;
+        cached_time    = 0;
+    }
+
+    bool pedge(vluint64_t time_ps) {
+        eval(time_ps);
+        return cached_edge == 1;
+    }
+
+    bool nedge(vluint64_t time_ps) {
+        eval(time_ps);
+        return cached_edge == -1;
+    }
+
+    bool edge(vluint64_t time_ps) {
+        eval(time_ps);
+        return cached_edge != 0;
+    }
+
+private:
     vluint64_t half_period_ps = 0;
     vluint64_t next_edge_ps   = 0;
     CData*     signal         = nullptr;
@@ -51,34 +80,6 @@ class ClockGen {
         *signal = !(*signal);
         next_edge_ps += half_period_ps;
         cached_edge = *signal ? 1 : -1;
-    }
-
-public:
-    ClockGen() = default;
-
-    void init(double freq_mhz, CData* sig) {
-        signal = sig;
-        vluint64_t raw = (vluint64_t)(500000.0 / freq_mhz + 0.5);
-        half_period_ps = ((raw + TSTEP_PS / 2) / TSTEP_PS) * TSTEP_PS;
-        next_edge_ps   = half_period_ps;
-        *signal        = 0;
-        cached_edge    = 0;
-        cached_time    = 0;
-    }
-
-    bool pedge(vluint64_t time_ps) { 
-        eval(time_ps);
-        return cached_edge == 1;
-    }
-
-    bool nedge(vluint64_t time_ps) {
-        eval(time_ps);
-        return cached_edge == -1;
-    }
-
-    bool edge(vluint64_t time_ps) {
-        eval(time_ps);
-        return cached_edge != 0;
     }
 };
 
