@@ -2,3 +2,6 @@
 .stamp.verilate
 *.vcd
 obj_dir
+*.vcd
+obj_dir*/
+.stamp.verilate*
