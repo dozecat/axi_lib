@@ -28,8 +28,9 @@ RTL_DIR   = ../../../rtl
 RTL_FILES = $(shell find $(RTL_DIR) -name "*.sv" -o -name "*.v")
 
 BFM_DIR   = ../../../sim/bfm
-CPP_DIRS  = $(BFM_DIR) $(BFM_DIR)/axis
+CPP_DIRS  = $(BFM_DIR) $(BFM_DIR)/axis $(BFM_DIR)/corosim
 CPP_INC   = $(foreach dir, $(CPP_DIRS), -I$(abspath $(dir)))
+COROSIM_CPP = $(BFM_DIR)/corosim/engine.cpp
 
 # ---- DUT parameters (overridable from command line / convenience targets) ----
 FRAME_FIFO     ?= 0
@@ -79,9 +80,9 @@ $(STAMP): $(TOP) $(TEST_CPP) FORCE
 	$(VERILATOR) -Wall --trace --trace-depth 99 --no-trace-params \
 	  --x-assign unique --x-initial unique \
 	  --top-module $(MODULE) \
-	  -cc $(TOP) --exe $(TEST_CPP) \
+	  -cc $(TOP) --exe $(TEST_CPP) $(COROSIM_CPP) \
 	  -Mdir $(OBJ_DIR) \
-	  -CFLAGS "$(CPP_INC)" \
+	  -CFLAGS "$(CPP_INC) -std=c++20" \
 	  $(foreach f, $(RTL_FILES), $(f)) \
 	  $(PARAMS) \
 	  -public \
