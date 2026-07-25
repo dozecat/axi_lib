@@ -87,8 +87,8 @@ public:
     }
 
     void update_output() {
+        *(port.tvalid) = false;  // Always clear — prevents stale-valid duplication
         if (tready_i) {
-            *(port.tvalid) = false;
             // start new transaction
             if (tx_buf.empty() && !tx_queue.empty()) {
                 tx_buf = tx_queue.front();
