@@ -42,19 +42,18 @@ static axis_slave_ptr<64,8,1,1> bind_slv(Vaxis_async_fifo_tb* top) {
 }
 
 // ---- reset: drive via Signal::next, not direct write ----
-Task reset_proc(Signal<bool>* s_rst, Signal<bool>* m_rst, Signal<bool>* s_clk) {
-    s_rst->next(1);
-    m_rst->next(1);
-    co_await clock_cycles(*s_clk, 3);
-    s_rst->next(0);
-    m_rst->next(0);
+Task reset_proc(Signal<bool>& s_rst, Signal<bool>& m_rst, Signal<bool>& s_clk) {
+    s_rst.next(1);
+    m_rst.next(1);
+    co_await clock_cycles(s_clk, 3);
+    s_rst.next(0);
+    m_rst.next(0);
 }
 
 // ---- writer: send N words after reset ----
-Task writer_proc(Vaxis_async_fifo_tb* top, Signal<bool>* s_clk,
-                 axis_master<64,8,1,1>* mst, int nwords) {
-    co_await clock_cycles(*s_clk, 5);
-    co_await clock_cycles(*s_clk, 3);
+Task writer_proc(Signal<bool>& s_clk, axis_master<64,8,1,1>& mst, int nwords) {
+    co_await clock_cycles(s_clk, 5);
+    co_await clock_cycles(s_clk, 3);
 
     int total = nwords * DATA_BYTES;
     std::vector<uint8_t> bytes(total);
@@ -62,20 +61,20 @@ Task writer_proc(Vaxis_async_fifo_tb* top, Signal<bool>* s_clk,
         bytes[i] = i & 0xFF;
 
     printf("  writer: send %d words\n", nwords);
-    mst->send(bytes, 0, 0, 0, false);
-    co_await clock_cycles(*s_clk, 50);
+    mst.send(bytes, 0, 0, 0, false);
+    co_await clock_cycles(s_clk, 50);
 }
 
 // ---- reader: receive and verify N words ----
-Task reader_proc(Vaxis_async_fifo_tb* top, Signal<bool>* m_clk,
-                 axis_slave<64,8,1,1>* slv, int exp_words, int* rx_count) {
-    co_await clock_cycles(*m_clk, 5);
+Task reader_proc(Signal<bool>& m_clk, axis_slave<64,8,1,1>& slv,
+                 int exp_words, int& rx_count) {
+    co_await clock_cycles(m_clk, 5);
 
     int rx = 0;
     while (rx < exp_words) {
-        co_await posedge(*m_clk);
+        co_await posedge(m_clk);
         std::vector<uint8_t> buf;
-        if (slv->recv(buf) > 0) {
+        if (slv.recv(buf) > 0) {
             for (int w = 0; w < (int)buf.size() / DATA_BYTES && rx < exp_words; w++) {
                 bool ok = true;
                 for (int b = 0; b < DATA_BYTES; b++) {
@@ -91,7 +90,7 @@ Task reader_proc(Vaxis_async_fifo_tb* top, Signal<bool>* m_clk,
             }
         }
     }
-    if (rx_count) *rx_count = rx;
+    rx_count = rx;
 }
 
 int main(int argc, char** argv) {
@@ -131,9 +130,9 @@ int main(int argc, char** argv) {
     });
 
     int rx_count = 0;
-    sim.task([&]() -> Task { return reset_proc(&s_rst, &m_rst, &s_clk); });
-    sim.task([&]() -> Task { return writer_proc(top.get(), &s_clk, &mst, nwords); });
-    sim.task([&]() -> Task { return reader_proc(top.get(), &m_clk, &slv, nwords, &rx_count); });
+    sim.task([&]() -> Task { return reset_proc(s_rst, m_rst, s_clk); });
+    sim.task([&]() -> Task { return writer_proc(s_clk, mst, nwords); });
+    sim.task([&]() -> Task { return reader_proc(m_clk, slv, nwords, rx_count); });
 
     printf("=== axis_async_fifo TB (corosim) ===\n");
     printf("DEPTH=%d words=%d\n", depth, nwords);
