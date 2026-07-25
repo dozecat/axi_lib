@@ -15,23 +15,45 @@
 
 using namespace corosim;
 
-static const int SIM_TIME   = 1000000;
+static const int SIM_TIME   = 10000;
 static const int DATA_BYTES = 8;
-static const int WR_HALF    = 250;
-static const int RD_HALF    = 154;
 
-// BIND_AXIS(p, prefix, top) fills axis_*_ptr<...> fields from a flat prefix
-#define BIND_AXIS(p, prefix, top) \
-    p.tdata=&top->prefix##_tdata; p.tkeep=&top->prefix##_tkeep; \
-    p.tstrb=&top->prefix##_tstrb; p.tid=&top->prefix##_tid; \
-    p.tdest=&top->prefix##_tdest; p.tuser=&top->prefix##_tuser; \
-    p.tlast=&top->prefix##_tlast; p.tvalid=&top->prefix##_tvalid; \
-    p.tready=&top->prefix##_tready
+static int errors = 0;
 
+// ---- port binding (replace BIND_AXIS macro) ----
+static axis_master_ptr<64,8,1,1> bind_mst(Vaxis_async_fifo_tb* top) {
+    axis_master_ptr<64,8,1,1> p;
+    p.tdata=&top->s_axis_tdata; p.tkeep=&top->s_axis_tkeep;
+    p.tstrb=&top->s_axis_tstrb; p.tid=&top->s_axis_tid;
+    p.tdest=&top->s_axis_tdest; p.tuser=&top->s_axis_tuser;
+    p.tlast=&top->s_axis_tlast; p.tvalid=&top->s_axis_tvalid;
+    p.tready=&top->s_axis_tready;
+    return p;
+}
+
+static axis_slave_ptr<64,8,1,1> bind_slv(Vaxis_async_fifo_tb* top) {
+    axis_slave_ptr<64,8,1,1> p;
+    p.tdata=&top->m_axis_tdata; p.tkeep=&top->m_axis_tkeep;
+    p.tstrb=&top->m_axis_tstrb; p.tid=&top->m_axis_tid;
+    p.tdest=&top->m_axis_tdest; p.tuser=&top->m_axis_tuser;
+    p.tlast=&top->m_axis_tlast; p.tvalid=&top->m_axis_tvalid;
+    p.tready=&top->m_axis_tready;
+    return p;
+}
+
+// ---- reset: drive via Signal::next, not direct write ----
+Task reset_proc(Signal<bool>* s_rst, Signal<bool>* m_rst, Signal<bool>* s_clk) {
+    s_rst->next(1);
+    m_rst->next(1);
+    co_await clock_cycles(*s_clk, 3);
+    s_rst->next(0);
+    m_rst->next(0);
+}
+
+// ---- writer: send N words after reset ----
 Task writer_proc(Vaxis_async_fifo_tb* top, Signal<bool>* s_clk,
                  axis_master<64,8,1,1>* mst, int nwords) {
     co_await clock_cycles(*s_clk, 5);
-    top->s_rst = 0;
     co_await clock_cycles(*s_clk, 3);
 
     int total = nwords * DATA_BYTES;
@@ -44,12 +66,10 @@ Task writer_proc(Vaxis_async_fifo_tb* top, Signal<bool>* s_clk,
     co_await clock_cycles(*s_clk, 50);
 }
 
-static int errors = 0;
-
+// ---- reader: receive and verify N words ----
 Task reader_proc(Vaxis_async_fifo_tb* top, Signal<bool>* m_clk,
                  axis_slave<64,8,1,1>* slv, int exp_words, int* rx_count) {
     co_await clock_cycles(*m_clk, 5);
-    top->m_rst = 0;
 
     int rx = 0;
     while (rx < exp_words) {
@@ -84,28 +104,22 @@ int main(int argc, char** argv) {
     const char* vcd = (argc > 1) ? argv[1] : "waveform.vcd";
     tfp->open(vcd);
 
-    top->s_rst = 1; top->m_rst = 1;
+    // Probe DUT parameters (need eval to settle combinational outputs)
     top->eval();
-
     int depth = top->tb_depth;
     int nwords = 14;
 
     Signal<bool> s_clk(&top->s_clk), m_clk(&top->m_clk);
+    Signal<bool> s_rst(&top->s_rst), m_rst(&top->m_rst);
 
-    axis_master_ptr<64,8,1,1> mp;
-    BIND_AXIS(mp, s_axis, top);
-    axis_master<64,8,1,1> mst(mp);
-    mst.log.quiet = true;
-
-    axis_slave_ptr<64,8,1,1> sp;
-    BIND_AXIS(sp, m_axis, top);
-    axis_slave<64,8,1,1> slv(sp);
-    slv.log.quiet = true;
+    axis_master<64,8,1,1> mst(bind_mst(top.get()));
+    axis_slave<64,8,1,1>  slv(bind_slv(top.get()));
+    mst.log.quiet = true; slv.log.quiet = true;
 
     Engine sim;
 
-    sim.always(delay(WR_HALF), [&] { s_clk.next(!s_clk.read()); });
-    sim.always(delay(RD_HALF), [&] { m_clk.next(!m_clk.read()); });
+    sim.always(delay(5), [&] { s_clk.next(!s_clk.read()); });
+    sim.always(delay(3), [&] { m_clk.next(!m_clk.read()); });
 
     sim.sample_cb(posedge(s_clk), [&] { mst.update_input(); });
     sim.sample_cb(posedge(m_clk), [&] { slv.update_input(); });
@@ -117,12 +131,9 @@ int main(int argc, char** argv) {
     });
 
     int rx_count = 0;
-    sim.task([&]() -> Task {
-        return writer_proc(top.get(), &s_clk, &mst, nwords);
-    });
-    sim.task([&]() -> Task {
-        return reader_proc(top.get(), &m_clk, &slv, nwords, &rx_count);
-    });
+    sim.task([&]() -> Task { return reset_proc(&s_rst, &m_rst, &s_clk); });
+    sim.task([&]() -> Task { return writer_proc(top.get(), &s_clk, &mst, nwords); });
+    sim.task([&]() -> Task { return reader_proc(top.get(), &m_clk, &slv, nwords, &rx_count); });
 
     printf("=== axis_async_fifo TB (corosim) ===\n");
     printf("DEPTH=%d words=%d\n", depth, nwords);
