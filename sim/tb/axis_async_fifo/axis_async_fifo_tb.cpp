@@ -159,8 +159,14 @@ int main(int argc, char** argv) {
     sim.always(delay(WR_HALF), [&] { s_clk.next(!s_clk.read()); });
     sim.always(delay(RD_HALF), [&] { m_clk.next(!m_clk.read()); });
 
-    sim.always(posedge(s_clk), [&] { mst.update_input(); mst.update_output(); });
-    sim.always(posedge(m_clk), [&] { slv.update_input(); slv.update_output(); });
+    // update_input before eval, update_output after eval (SimCoop/vaxivip convention)
+    // update_input before eval (pre_eval), update_output once per posedge
+    sim.pre_eval([&] {
+        if (s_clk.read()) mst.update_input();
+        if (m_clk.read()) slv.update_input();
+    });
+    sim.always(posedge(s_clk), [&] { mst.update_output(); });
+    sim.always(posedge(m_clk), [&] { slv.update_output(); });
 
     sim.always(posedge(s_clk), [&] {
         if (top->s_good_frame) S.good_count++;
