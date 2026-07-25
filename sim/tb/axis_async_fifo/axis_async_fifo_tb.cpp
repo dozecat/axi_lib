@@ -23,7 +23,7 @@ static const int RD_HALF    = 154;
 static int errors = 0;
 
 struct Shared {
-    Signal<uint8_t>* s_clk, * m_clk;
+    Signal<uint8_t>* s_clk, * m_clk;  // corosim_sig_t(0,0) = CData = uint8_t
     Vaxis_async_fifo_tb* top;
     axis_master<64,8,1,1>* mst;
     axis_slave<64,8,1,1>*  slv;
@@ -146,7 +146,8 @@ int main(int argc, char** argv) {
         S.exp_words = 14;
     }
 
-    Signal<uint8_t> s_clk(&top->s_clk), m_clk(&top->m_clk);
+    // vaxivip-style: sig_t(msb,lsb) auto-selects type from bit width
+    Signal<corosim_sig_t(0,0)> s_clk(&top->s_clk), m_clk(&top->m_clk);
     S.s_clk = &s_clk; S.m_clk = &m_clk;
 
     axis_master<64,8,1,1> mst(make_mst_port(top.get()));

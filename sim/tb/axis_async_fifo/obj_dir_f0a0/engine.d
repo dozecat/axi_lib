@@ -1,0 +1,10 @@
+engine.o: ../../../../sim/bfm/corosim/engine.cpp \
+  ../../../../sim/bfm/corosim/engine.hpp \
+  /opt/homebrew/Cellar/verilator/5.044/share/verilator/include/verilated.h \
+  /opt/homebrew/Cellar/verilator/5.044/share/verilator/include/verilated_config.h \
+  /opt/homebrew/Cellar/verilator/5.044/share/verilator/include/verilatedos.h \
+  /opt/homebrew/Cellar/verilator/5.044/share/verilator/include/verilated_types.h \
+  /opt/homebrew/Cellar/verilator/5.044/share/verilator/include/verilated_funcs.h \
+  ../../../../sim/bfm/corosim/task.hpp \
+  ../../../../sim/bfm/corosim/delay.hpp \
+  ../../../../sim/bfm/corosim/signal.hpp
