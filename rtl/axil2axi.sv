@@ -1,7 +1,7 @@
 //*****************************************************************************
 // Copyright (C) 2026 dozecat. All rights reserved.
 // SPDX-License-Identifier: MIT
-// 
+//
 // File:        axil2axi.sv
 // Description: AXI4-Lite to AXI4 Bridge
 // Repository:  https://github.com/dozecat/axi_lib.git

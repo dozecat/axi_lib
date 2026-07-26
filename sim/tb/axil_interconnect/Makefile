@@ -9,9 +9,11 @@ VERILATOR = verilator
 RTL_DIR   = ../../../rtl
 RTL_FILES = $(shell find $(RTL_DIR) -name "*.sv" -o -name "*.v")
 
-# BFM C++ headers
-BFM_DIR   = ../../../sim/bfm
-CPP_DIRS  = $(BFM_DIR) $(BFM_DIR)/axil
+ROOT_DIR   = $(abspath ../../..)
+DEPS_DIR   = $(ROOT_DIR)/.deps
+VAXIVIP_DIR = $(DEPS_DIR)/sim/vaxivip
+
+CPP_DIRS  = $(VAXIVIP_DIR) $(VAXIVIP_DIR)/axil
 CPP_INC   = $(foreach dir, $(CPP_DIRS), -I$(abspath $(dir)))
 
 # Local SV files
@@ -44,7 +46,11 @@ waveform.vcd: ./obj_dir/V$(MODULE)
 
 FORCE:
 
-.stamp.verilate: $(TOP) $(TEST_CPP) FORCE
+$(DEPS_DIR)/.stamp.prepare:
+	@echo "Error: dependencies not found. Run: python3 $(ROOT_DIR)/script/get_deps.py --init"
+	@false
+
+.stamp.verilate: $(TOP) $(TEST_CPP) $(DEPS_DIR)/.stamp.prepare FORCE
 	@echo
 	@echo "### VERILATING ###"
 	$(VERILATOR) -Wall --trace --no-trace-params \

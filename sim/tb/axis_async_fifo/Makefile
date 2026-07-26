@@ -27,10 +27,14 @@ VERILATOR = verilator
 RTL_DIR   = ../../../rtl
 RTL_FILES = $(shell find $(RTL_DIR) -name "*.sv" -o -name "*.v")
 
-BFM_DIR   = ../../../sim/bfm
-CPP_DIRS  = $(BFM_DIR) $(BFM_DIR)/axis $(BFM_DIR)/corosim
+ROOT_DIR   = $(abspath ../../..)
+DEPS_DIR   = $(ROOT_DIR)/.deps
+VAXIVIP_DIR = $(DEPS_DIR)/sim/vaxivip
+COROSIM_DIR = $(DEPS_DIR)/sim/corosim
+
+CPP_DIRS  = $(VAXIVIP_DIR) $(VAXIVIP_DIR)/axis $(COROSIM_DIR)
 CPP_INC   = $(foreach dir, $(CPP_DIRS), -I$(abspath $(dir)))
-COROSIM_CPP = $(BFM_DIR)/corosim/engine.cpp
+COROSIM_CPP = $(COROSIM_DIR)/engine.cpp
 
 # ---- DUT parameters (overridable from command line / convenience targets) ----
 FRAME_FIFO     ?= 0
@@ -73,7 +77,11 @@ $(EXE): $(STAMP)
 
 FORCE:
 
-$(STAMP): $(TOP) $(TEST_CPP) FORCE
+$(DEPS_DIR)/.stamp.prepare:
+	@echo "Error: dependencies not found. Run: python3 $(ROOT_DIR)/script/get_deps.py --init"
+	@false
+
+$(STAMP): $(TOP) $(TEST_CPP) $(DEPS_DIR)/.stamp.prepare FORCE
 	@echo
 	@echo "### VERILATING ### (FRAME=$(FRAME_FIFO) ALWAYS=$(ALWAYS_RECEIVE))"
 	mkdir -p $(OBJ_DIR)

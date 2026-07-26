@@ -16,6 +16,7 @@ TARGET_EXTENSIONS = [
 
 EXCLUDE_DIRS = [
     '.git',
+    '.deps',
     'script',
     '__pycache__',
     'obj_dir',

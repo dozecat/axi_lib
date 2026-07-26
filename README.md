@@ -7,7 +7,7 @@
 <span id="en">axi_lib</span>
 ===========================
 
-**axi_lib** is a SystemVerilog AXI RTL library for FPGA/ASIC designs. It provides AXI4/AXI4-Lite/AXI4-Stream interconnect and function modules, plus primitive components (arbiter, sync/async FIFOs, skid buffer). Simulation uses [Verilator](https://www.veripool.org/verilator/) with BFMs from [vaxivip](https://github.com/dozecat/vaxivip.git).
+**axi_lib** is a SystemVerilog AXI RTL library for FPGA/ASIC designs. It provides AXI4/AXI4-Lite/AXI4-Stream interconnect and function modules, plus primitive components (arbiter, sync/async FIFOs, skid buffer). Simulation uses [Verilator](https://www.veripool.org/verilator/) with BFMs from [vaxivip](https://github.com/dozecat/vaxivip.git) and coroutine engine from [corosim](https://github.com/dozecat/corosim.git).
 
 ## ✨ Features
 
@@ -28,20 +28,27 @@ brew install verilator
 sudo apt-get install verilator g++ make
 ```
 
-### 2. Run AXI Interconnect Simulation
+### 2. Download Dependencies
 ```bash
-cd sim/tb/axi_interconnect
-make sim
+python run.py init
+# or: ./run.sh init
 ```
 
-### 3. Run AXI4-Lite Interconnect Simulation
+### 3. Run Simulation
 ```bash
-cd sim/tb/axil_interconnect
-make sim
+# run all testbenches
+python run.py sim
+
+# run a specific testbench
+python run.py sim axi_interconnect
+
+# or using the shell wrapper
+./run.sh sim
 ```
 
 ### 4. View Waveform (optional)
 ```bash
+cd sim/tb/axi_interconnect
 make waves    # requires gtkwave
 ```
 
@@ -57,21 +64,30 @@ make waves    # requires gtkwave
 │   ├── axil_interconnect.sv    # AXI4-Lite crossbar interconnect
 │   ├── axi2axil.sv             # AXI4 to AXI4-Lite bridge
 │   ├── axil2axi.sv             # AXI4-Lite to AXI4 bridge
+│   ├── axil2reg_bridge.sv      # AXI4-Lite to register bridge
+│   ├── axis_async_fifo.sv      # AXI4-Stream async FIFO
 │   ├── arbiter.sv              # Priority arbiter
 │   ├── sync_fifo.v             # Synchronous FIFO
+│   ├── async_fifo.v            # Asynchronous FIFO
 │   └── skid_buffer.v           # Pipeline skid buffer
+├── .deps/                      # Auto-downloaded dependencies (gitignored)
+│   ├── sim/vaxivip/            # BFM sources from vaxivip
+│   ├── sim/corosim/            # Coroutine engine from corosim
+│   └── rtl/                    # (future) external RTL dependencies
+├── script/
+│   ├── get_deps.py             # Dependency downloader
+│   ├── remove_trailing_spaces.py
+│   └── file_list.py
+├── run.py                      # Project entry point
+├── run.sh                      # Shell wrapper for run.py
 ├── sim/
-│   ├── bfm/                    # C++ BFMs
-│   │   ├── axi/                # AXI4 master/slave/ptr/common
-│   │   ├── axil/               # AXI4-Lite master/slave/ptr
-│   │   ├── axis/               # AXI4-Stream master/slave/prt
-│   │   ├── log.hpp             # Colored logging
-│   │   └── sig.hpp             # Signal type helpers
 │   └── tb/                     # Testbenches
 │       ├── axi_interconnect/   # AXI4 crossbar TB
 │       ├── axil_interconnect/  # AXI4-Lite crossbar TB
 │       ├── axi2axil/           # AXI4 to AXI4-Lite bridge TB
-│       └── axil2axi/           # AXI4-Lite to AXI4 bridge TB
+│       ├── axil2axi/           # AXI4-Lite to AXI4 bridge TB
+│       ├── axilreg/            # AXI4-Lite register bridge TB
+│       └── axis_async_fifo/    # AXI4-Stream async FIFO TB (uses corosim)
 └── README.md
 ```
 
@@ -124,7 +140,7 @@ make waves    # requires gtkwave
 
 ## 🧪 Testbench
 
-Simulation uses C++ BFMs from [vaxivip](https://github.com/dozecat/vaxivip.git). The BFMs follow an `update_input()` → `eval()` → `update_output()` pattern for clock-edge-accurate signal timing.
+Simulation uses C++ BFMs from [vaxivip](https://github.com/dozecat/vaxivip.git) and a coroutine engine from [corosim](https://github.com/dozecat/corosim.git). Dependencies are auto-downloaded via `python run.py init`. The BFMs follow an `update_input()` → `eval()` → `update_output()` pattern for clock-edge-accurate signal timing.
 
 ### Simulation Loop
 
@@ -153,11 +169,12 @@ axi_slv.update_output();
 
 | Module | Protocol | Description |
 |--------|----------|-------------|
-| **`axi`** (`sim/bfm/axi/`) | AXI4 | Master/Slave interface supporting FIXED, INCR, WRAP burst |
-| **`axil`** (`sim/bfm/axil/`) | AXI4-Lite | Master/Slave interface |
-| **`axis`** (`sim/bfm/axis/`) | AXI4-Stream | Master/Slave interface |
+| **`axi`** (`.deps/sim/vaxivip/axi/`) | AXI4 | Master/Slave interface supporting FIXED, INCR, WRAP burst |
+| **`axil`** (`.deps/sim/vaxivip/axil/`) | AXI4-Lite | Master/Slave interface |
+| **`axis`** (`.deps/sim/vaxivip/axis/`) | AXI4-Stream | Master/Slave interface |
+| **`corosim`** (`.deps/sim/corosim/`) | C++20 coroutine | Cooperative simulation engine for pipelined protocols |
 
-See `sim/tb/axi_interconnect/axi_interconnect_tb.cpp` for a complete example.
+See `sim/tb/axi_interconnect/axi_interconnect_tb.cpp` and `sim/tb/axis_async_fifo/axis_async_fifo_tb.cpp` for examples.
 
 ## 📝 Acknowledgements
 
@@ -174,7 +191,7 @@ Copyright (c) 2025 dozecat
 <span id="cn">axi_lib</span>
 ===========================
 
-**axi_lib** 是一个 SystemVerilog AXI RTL 库，适用于 FPGA/ASIC。提供 AXI4/AXI4-Lite/AXI4-Stream 互连与功能模块，以及仲裁器、FIFO、skid buffer 等基础组件。仿真采用 [Verilator](https://www.veripool.org/verilator/)，BFM 来自 [vaxivip](https://github.com/dozecat/vaxivip.git)。
+**axi_lib** 是一个 SystemVerilog AXI RTL 库，适用于 FPGA/ASIC。提供 AXI4/AXI4-Lite/AXI4-Stream 互连与功能模块，以及仲裁器、FIFO、skid buffer 等基础组件。仿真采用 [Verilator](https://www.veripool.org/verilator/)，BFM 来自 [vaxivip](https://github.com/dozecat/vaxivip.git)，协程引擎来自 [corosim](https://github.com/dozecat/corosim.git)。
 
 ## ✨ 特性概览
 
@@ -195,20 +212,27 @@ brew install verilator
 sudo apt-get install verilator g++ make
 ```
 
-### 2. 运行 AXI 互连仿真
+### 2. 下载依赖
 ```bash
-cd sim/tb/axi_interconnect
-make sim
+python run.py init
+# 或：./run.sh init
 ```
 
-### 3. 运行 AXI4-Lite 互连仿真
+### 3. 运行仿真
 ```bash
-cd sim/tb/axil_interconnect
-make sim
+# 仿真全部 testbench
+python run.py sim
+
+# 仿真指定 testbench
+python run.py sim axi_interconnect
+
+# 或使用 shell 包装脚本
+./run.sh sim
 ```
 
 ### 4. 查看波形（可选）
 ```bash
+cd sim/tb/axi_interconnect
 make waves    # 需要 gtkwave
 ```
 
@@ -224,21 +248,30 @@ make waves    # 需要 gtkwave
 │   ├── axil_interconnect.sv    # AXI4-Lite 交叉开关互连
 │   ├── axi2axil.sv             # AXI4 转 AXI4-Lite 桥接器
 │   ├── axil2axi.sv             # AXI4-Lite 转 AXI4 桥接器
+│   ├── axil2reg_bridge.sv      # AXI4-Lite 寄存器桥接器
+│   ├── axis_async_fifo.sv      # AXI4-Stream 异步 FIFO
 │   ├── arbiter.sv              # 优先级仲裁器
 │   ├── sync_fifo.v             # 同步 FIFO
+│   ├── async_fifo.v            # 异步 FIFO
 │   └── skid_buffer.v           # 流水线缓冲器
+├── .deps/                      # 自动下载的依赖（已忽略 git）
+│   ├── sim/vaxivip/            # BFM 源文件（来自 vaxivip）
+│   ├── sim/corosim/            # 协程引擎（来自 corosim）
+│   └── rtl/                    # （预留）外部 RTL 依赖
+├── script/
+│   ├── get_deps.py             # 依赖下载脚本
+│   ├── remove_trailing_spaces.py
+│   └── file_list.py
+├── run.py                      # 项目入口
+├── run.sh                      # run.py 的 shell 包装
 ├── sim/
-│   ├── bfm/                    # C++ BFM
-│   │   ├── axi/                # AXI4 主/从
-│   │   ├── axil/               # AXI4-Lite 主/从
-│   │   ├── axis/               # AXI4-Stream 主/从
-│   │   ├── log.hpp             # 彩色日志
-│   │   └── sig.hpp             # 信号类型辅助
 │   └── tb/                     # 测试用例
 │       ├── axi_interconnect/   # AXI4 交叉开关测试
 │       ├── axil_interconnect/  # AXI4-Lite 交叉开关测试
 │       ├── axi2axil/           # AXI4 转 AXI4-Lite 桥接测试
-│       └── axil2axi/           # AXI4-Lite 转 AXI4 桥接测试
+│       ├── axil2axi/           # AXI4-Lite 转 AXI4 桥接测试
+│       ├── axilreg/            # AXI4-Lite 寄存器桥接测试
+│       └── axis_async_fifo/    # AXI4-Stream 异步 FIFO 测试（使用 corosim）
 └── README.md
 ```
 
@@ -291,7 +324,7 @@ make waves    # 需要 gtkwave
 
 ## 🧪 测试平台
 
-仿真使用 [vaxivip](https://github.com/dozecat/vaxivip.git) 的 C++ BFM 驱动。BFM 遵循 `update_input()` → `eval()` → `update_output()` 时序模式实现时钟沿对齐的信号采样与驱动。
+仿真使用 [vaxivip](https://github.com/dozecat/vaxivip.git) 的 C++ BFM 和 [corosim](https://github.com/dozecat/corosim.git) 的协程引擎驱动。依赖通过 `python run.py init` 自动下载。BFM 遵循 `update_input()` → `eval()` → `update_output()` 时序模式实现时钟沿对齐的信号采样与驱动。
 
 ### 仿真循环
 
@@ -320,11 +353,12 @@ axi_slv.update_output();
 
 | 模块 | 协议 | 功能描述 |
 |------|------|----------|
-| **axi**（`sim/bfm/axi/`） | AXI4 | Master/Slave 接口，支持 FIXED（固定）、INCR（递增）、WRAP（回环）突发 |
-| **axil**（`sim/bfm/axil/`） | AXI4-Lite | Master/Slave 接口 |
-| **axis**（`sim/bfm/axis/`） | AXI4-Stream | Master/Slave 接口 |
+| **axi**（`.deps/sim/vaxivip/axi/`） | AXI4 | Master/Slave 接口，支持 FIXED、INCR、WRAP 突发 |
+| **axil**（`.deps/sim/vaxivip/axil/`） | AXI4-Lite | Master/Slave 接口 |
+| **axis**（`.deps/sim/vaxivip/axis/`） | AXI4-Stream | Master/Slave 接口 |
+| **corosim**（`.deps/sim/corosim/`） | C++20 协程 | 适用于流水线协议的合作仿真引擎 |
 
-完整示例请参考 `sim/tb/axi_interconnect/axi_interconnect_tb.cpp`。
+完整示例请参考 `sim/tb/axi_interconnect/axi_interconnect_tb.cpp` 和 `sim/tb/axis_async_fifo/axis_async_fifo_tb.cpp`。
 
 ## 📝 致谢
 
