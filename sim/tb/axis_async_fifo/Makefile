@@ -34,7 +34,7 @@ COROSIM_DIR = $(DEPS_DIR)/sim/corosim
 
 CPP_DIRS  = $(VAXIVIP_DIR) $(VAXIVIP_DIR)/axis $(COROSIM_DIR)
 CPP_INC   = $(foreach dir, $(CPP_DIRS), -I$(abspath $(dir)))
-COROSIM_CPP = $(COROSIM_DIR)/engine.cpp
+COROSIM_CPP = $(shell find $(COROSIM_DIR) -name "*.cpp")
 
 # ---- DUT parameters (overridable from command line / convenience targets) ----
 FRAME_FIFO     ?= 0

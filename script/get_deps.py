@@ -39,12 +39,11 @@ REPOS = {
         "prefix": "src/",
         "files":  [
             "corosim.hpp",
-            "task.hpp",
-            "delay.hpp",
-            "signal.hpp",
-            "engine.hpp",
-            "engine.cpp",
-            "triggers.hpp",
+            "core/",
+            "process/",
+            "scheduler/",
+            "signal/",
+            "trigger/",
         ],
     },
 }
