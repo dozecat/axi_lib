@@ -39,6 +39,8 @@ REPOS = {
         "prefix": "src/",
         "files":  [
             "corosim.hpp",
+            "check.hpp",
+            "logger.hpp",
             "core/",
             "process/",
             "scheduler/",
