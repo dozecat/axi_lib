@@ -41,8 +41,9 @@ REPOS = {
             "corosim.hpp",
             "check.hpp",
             "logger.hpp",
+            "api/",
             "core/",
-            "process/",
+            "coroutine/",
             "scheduler/",
             "signal/",
             "trigger/",
@@ -83,6 +84,10 @@ def copy_files(name, repo):
     cache = repo_cache_dir(name)
     dest = repo_dest_dir(name)
     prefix = repo["prefix"]
+
+    if os.path.exists(dest):
+        shutil.rmtree(dest)
+    os.makedirs(dest, exist_ok=True)
 
     for rel in repo["files"]:
         src = os.path.join(cache, prefix + rel)
